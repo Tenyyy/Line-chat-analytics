@@ -1,0 +1,6 @@
+pillow
+streamlit
+plotly
+pillow
+numpy
+wordcloud
