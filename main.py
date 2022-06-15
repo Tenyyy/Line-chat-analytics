@@ -17,7 +17,7 @@ import pickle
 
 
 # Todo
-# add most sum call time sum chat
+
 
 def deEmojify(text):
     regrex_pattern = re.compile(pattern = "["
@@ -120,21 +120,21 @@ sd = df[df["a"].str.contains("BE")]
 # st.write(sd.head())
 # st.write(sd.shape)
 
-df2 = df.copy()
-df2.dropna(inplace=True)
-dc = df2[df2["c"].str.contains("☎ Call time")]
-dc = dc[dc['c'].str.len() < 30]
-df['c'] = df['c'].astype('str')
-# st.write(dc)
+try:
+    df2 = df.copy()
+    df2.dropna(inplace=True)
+    dc = df2[df2["c"].str.contains("☎ Call time")]
+    dc = dc[dc['c'].str.len() < 30]
+    df['c'] = df['c'].astype('str')
 
-new = dc["c"].str.split("e", n = 1, expand = True)
-dc["call time"]= new[1]
-# st.write(dc.head())
+    new = dc["c"].str.split("e", n = 1, expand = True)
+    dc["call time"]= new[1]
 
-dc['call second'] = dc['call time'].apply(lambda x: fix_call(x))
-dc = dc.sort_values(by = 'call second', ascending = False)
-dc.reset_index(inplace=True)
-# st.write(dc.head())
+    dc['call second'] = dc['call time'].apply(lambda x: fix_call(x))
+    dc = dc.sort_values(by='call second', ascending=False)
+    dc.reset_index(inplace=True)
+except:
+    pass
 
 
 # count time
@@ -146,6 +146,7 @@ value = df['c'].value_counts().index.tolist()
 
 st.header('Top messages')
 count= st.slider('top message:', min_value=0, max_value=100, step=1, value=20)
+df = df[df['c'] != 'nan']
 fig1 = px.bar(df['c'].value_counts()[:count],title='Count chat', text_auto='s')
 fig1.update_traces(marker_color='#ff6961')
 fig1.update_layout(template = 'plotly_white')
@@ -158,13 +159,15 @@ fig6.update_traces(marker_color='#ff6961')
 fig6.update_layout(template = 'plotly_white')
 st.plotly_chart(fig6)
 
-
-st.header('Top count call time')
-count= st.slider('top count call time:', min_value=0, max_value=100, step=1, value=20)
-fig7 = px.bar(dc['call second'][:count],title='Count call time', text_auto='s')
-fig7.update_traces(marker_color='#ff6961')
-fig7.update_layout(template = 'plotly_white')
-st.plotly_chart(fig7)
+try:
+    st.header('Top count call time')
+    count= st.slider('top count call time:', min_value=0, max_value=100, step=1, value=20)
+    fig7 = px.bar(dc['call second'][:count],title='Count call time', text_auto='s')
+    fig7.update_traces(marker_color='#ff6961')
+    fig7.update_layout(template = 'plotly_white')
+    st.plotly_chart(fig7)
+except:
+    pass
 
 st.header('Top chat in a day count')
 count= st.slider('top chat in a day count:', min_value=0, max_value=100, step=1, value=20)
@@ -174,6 +177,14 @@ fig12.update_layout(template = 'plotly_white')
 st.plotly_chart(fig12)
 df = df[df['b'].notna()]
 
+try:
+    st.header("Fun fact")
+    col1, col2, col3 = st.columns(3)
+    col1.metric(label="Cumulative call time (second)", value=str(dc['call second'].sum()))
+    col2.metric(label="Total chat", value=str(df['b'].count()))
+    col3.metric(label="Top chat by", value=f"{str(df['b'].value_counts().index[0])} : {str(df['b'].value_counts()[0])} ")
+except:
+    pass
 
 mostcommon = value[:100]
 wordcloud = WordCloud( font_path='assets/THSarabunNew.ttf', width=1600, height=800, background_color='white',regexp=r"[\u0E00-\u0E7Fa-zA-Z']+",colormap='Set2').generate(str(mostcommon))
