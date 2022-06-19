@@ -3,4 +3,7 @@ streamlit
 plotly
 pillow
 numpy
+pandas
 wordcloud
+tensorflow 
+scikit-learn
