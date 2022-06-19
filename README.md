@@ -24,3 +24,7 @@ pip install -r requirements.txt
 ```bash
 streamlit run main.py
 ```
+
+## How to use
+
+Export line chat from line application and upload to this app.
