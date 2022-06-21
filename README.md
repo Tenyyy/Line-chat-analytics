@@ -28,3 +28,7 @@ streamlit run main.py
 ## How to use
 
 Export line chat from line application and upload to this app.
+
+## Deployed app
+
+https://share.streamlit.io/pannapann/line-chat-analytics/main/main.py
