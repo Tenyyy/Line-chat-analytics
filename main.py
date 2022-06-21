@@ -251,7 +251,7 @@ else:
 text = st.text_input('Any words', '...')
 try:
     from keras.preprocessing.text import Tokenizer
-    from keras.preprocessing.sequence import pad_sequences
+    from tensorflow.keras.preprocessing.sequence import pad_sequences
     predicted = get_predict(str(text))
     st.write(f"Predicted writer: {predicted}")
 except:
