@@ -11,7 +11,9 @@ import numpy as np
 from PIL import Image
 from wordcloud import WordCloud, STOPWORDS, ImageColorGenerator
 import pickle
-
+import json
+import requests
+import deepcut
 
 
 
@@ -53,18 +55,6 @@ def get_predict(X_test):
     return who
 
 
-def get_predict_wandb(X_test,model):
-    """this fuction load and predict value of the tect classification"""
-    if X_test == '...':
-        return '...'
-    else:
-        X_test = [X_test]
-        X_test=tokenizer.texts_to_sequences(X_test)
-        X_test=pad_sequences(X_test, maxlen=MAX_SEQUENCE_LENGTH)
-        result = model.predict(X_test)
-        who = who_write(result)
-    return who
-
 def fix_call(x):
     if len(x)<=6:
         split_string = x.split(":", 1)
@@ -79,8 +69,19 @@ def fix_call(x):
         second = int(substring1)*60*60 + int(substring2)*60 + int(substring3)
     return second
 
-st.header('Upload csv file')
-uploaded_file = st.file_uploader("Upload csv file")
+@st.cache
+def count_word(df):
+    result = []
+    df_ = df.copy()
+    df_['c'] = df_['c'].astype('str')
+    for i in df_['c']:
+        result.extend(i)
+    words = deepcut.tokenize(result)
+    df_word = pd.DataFrame(words,columns=['words'])
+    return df_word
+
+st.header('Upload line chat file (.txt)')
+uploaded_file = st.file_uploader("Upload line chat file (.txt)")
 if uploaded_file is None:
     st.stop()
 if uploaded_file is not None:
@@ -152,6 +153,16 @@ fig1.update_traces(marker_color='#ff6961')
 fig1.update_layout(template = 'plotly_white')
 st.plotly_chart(fig1)
 
+
+
+st.header('Top words')
+count= st.slider('top words:', min_value=0, max_value=100, step=1, value=20)
+df_word = count_word(df)
+fig1 = px.bar(df_word['words'].value_counts()[1:count],title='Count chat', text_auto='s')
+fig1.update_traces(marker_color='#ff6961')
+fig1.update_layout(template = 'plotly_white')
+st.plotly_chart(fig1)
+
 st.header('Top time')
 count= st.slider('top time:', min_value=0, max_value=100, step=1, value=20)
 fig6 = px.bar(df['a'].value_counts()[:count],title='Count time', text_auto='s')
@@ -192,6 +203,7 @@ wordcloud.to_file('wordcloud.png')
 image = Image.open('wordcloud.png')
 st.header('Wordcloud of top words')
 st.image(image, caption='Wordcloud of top words')
+
 
 
 
