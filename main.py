@@ -156,12 +156,18 @@ st.plotly_chart(fig1)
 
 
 st.header('Top words')
-count= st.slider('top words:', min_value=0, max_value=100, step=1, value=20)
-df_word = count_word(df)
-fig1 = px.bar(df_word['words'].value_counts()[1:count],title='Count chat', text_auto='s')
-fig1.update_traces(marker_color='#ff6961')
-fig1.update_layout(template = 'plotly_white')
-st.plotly_chart(fig1)
+if st.button('Top words (take 1-2 minutes)'):
+    try:
+        count= st.slider('top words:', min_value=0, max_value=100, step=1, value=20)
+        df_word = count_word(df)
+        fig1 = px.bar(df_word['words'].value_counts()[1:count],title='Count chat', text_auto='s')
+        fig1.update_traces(marker_color='#ff6961')
+        fig1.update_layout(template = 'plotly_white')
+        st.plotly_chart(fig1)
+    except:
+        pass
+else:
+    pass
 
 st.header('Top time')
 count= st.slider('top time:', min_value=0, max_value=100, step=1, value=20)
