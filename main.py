@@ -6,6 +6,7 @@ import re
 from io import StringIO
 import numpy as np
 import plotly.express as px
+import plotly.graph_objects as go
 from wordcloud import WordCloud, STOPWORDS, ImageColorGenerator
 import numpy as np
 from PIL import Image
@@ -69,6 +70,33 @@ def fix_call(x):
         second = int(substring1)*60*60 + int(substring2)*60 + int(substring3)
     return second
 
+def create_date_time(list):
+    result = []
+    latest_date = ""
+    for i in list:
+        if i.find("BE") != -1:
+            latest_date = str(i)
+            result.append(str(i))
+        else:
+            result.append(latest_date)
+    return result
+
+def extract_day_date(df_, list):
+    date_list = list
+    day_list = list
+    date_list = date_list.str.split(' ', 2, expand=True)
+    day_list = day_list.str.split(',', 1, expand=True)
+    try:
+        df_['date'] = date_list[1]
+        df_['day'] = day_list[0]
+    except:
+        df_['date'] = date_list
+        df_['day'] = day_list
+        df_['date'] = df_['date'].str[1]
+        df_['day'] = df_['day'].str[0]
+    df_['is_weekday'] = df_['day'].apply(lambda x: 1 if x in ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'] else 0)
+    return df_
+
 @st.cache
 def count_word(df):
     result = []
@@ -101,6 +129,8 @@ df = df.iloc[2:]
 df.reset_index(inplace=True, drop=True)
 # st.write(df.head())
 df.reset_index(inplace=True)
+df['date'] = create_date_time(df['a'].values)
+df = extract_day_date(df, df['date'])
 null = df[(df.isnull().any(axis=1))&(df.a.str.len() > 10)]
 null.drop(columns=['b','c'],inplace=True)
 # st.write(null.head())
@@ -113,7 +143,7 @@ null['diff_chat'] = temp
 null['chat in a day'] = null['diff_chat'] - null['index']
 null = null.set_index('a')
 null = null.sort_values(by = 'chat in a day', ascending = False)
-# st.write(null.head())
+null = extract_day_date(null, null.index)
 
 # call time
 
@@ -176,6 +206,29 @@ fig6.update_traces(marker_color='#ff6961')
 fig6.update_layout(template = 'plotly_white')
 st.plotly_chart(fig6)
 
+
+st.header('Chat by time')
+plot_type = st.radio("Average or Cumulative",('Average', 'Cumulative'))
+
+df_plot_weekday = df[df['is_weekday'] == 1]
+df_plot_weekend = df[df['is_weekday'] == 0]
+grouped_chat_weekday = df_plot_weekday.groupby('a').agg({"b": "count"})
+grouped_chat_weekday['time'] = grouped_chat_weekday.index
+if plot_type  == 'Average':
+    grouped_chat_weekday['b'] = grouped_chat_weekday['b']/5
+grouped_chat_weekend = df_plot_weekend.groupby('a').agg({"b": "count"})
+grouped_chat_weekend['time'] = grouped_chat_weekend.index
+if plot_type  == 'Average':
+    grouped_chat_weekend['b'] = grouped_chat_weekend['b']/2
+fig6 = go.Figure()
+fig6.add_trace(go.Scatter(y=grouped_chat_weekday['b'].values, x=grouped_chat_weekday['time'].values
+                              , mode='lines', name='weekday lines'))
+fig6.add_trace(go.Scatter(y=grouped_chat_weekend['b'].values, x=grouped_chat_weekend['time'].values
+                              , mode='lines', name='weekend lines'))
+fig6.update_xaxes(rangeslider_visible=True)
+fig6.update_layout(template='plotly_white')
+st.plotly_chart(fig6)
+
 try:
     st.header('Top count call time')
     count= st.slider('top count call time:', min_value=0, max_value=100, step=1, value=20)
@@ -187,8 +240,13 @@ except:
     pass
 
 st.header('Top chat in a day count')
+day_type = st.radio("Weekday or Weekend",('Weekday', 'Weekend'))
+if day_type  == 'Weekday':
+     null_plot = null[null['is_weekday'] == 1]
+else:
+     null_plot = null[null['is_weekday'] == 0]
 count= st.slider('top chat in a day count:', min_value=0, max_value=100, step=1, value=20)
-fig12 = px.bar(null['chat in a day'][:count],title='Chat in a day', text_auto='s')
+fig12 = px.bar(null_plot['chat in a day'][:count],title='Chat in a day', text_auto='s')
 fig12.update_traces(marker_color='#ff6961')
 fig12.update_layout(template = 'plotly_white')
 st.plotly_chart(fig12)
