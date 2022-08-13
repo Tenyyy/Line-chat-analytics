@@ -23,6 +23,7 @@ import deepcut
 
 
 def deEmojify(text):
+    """removes emoji, so we can feed the data to pandas"""
     regrex_pattern = re.compile(pattern = "["
         u"\U0001F600-\U0001F64F"  # emoticons
         u"\U0001F300-\U0001F5FF"  # symbols & pictographs
@@ -32,13 +33,13 @@ def deEmojify(text):
     return regrex_pattern.sub(r'',text)
 
 def who_write(array):
-    """this fuction return the name (string) by selecting the max score from prediction"""
+    """return the name (string) by selecting the max score from prediction"""
     max_index = np.argmax(array)
     name = df['name'].unique()
     return name[max_index]
 
 def get_predict(X_test):
-    """this fuction load and predict value of the text classification"""
+    """load and predict value of the text classification"""
     if X_test == '...':
         return '...'
     else:
@@ -57,6 +58,7 @@ def get_predict(X_test):
 
 
 def fix_call(x):
+    """create a call time feature in second unit"""
     if len(x)<=6:
         split_string = x.split(":", 1)
         substring1 = split_string[0]
@@ -71,6 +73,7 @@ def fix_call(x):
     return second
 
 def create_date(list):
+    """create date column"""
     result = []
     latest_date = ""
     for i in list:
@@ -82,6 +85,7 @@ def create_date(list):
     return result
 
 def extract_day_date(df_, list):
+    """extract date feature from string and create is_weekend feature"""
     date_list = list
     day_list = list
     date_list = date_list.str.split(' ', 2, expand=True)
@@ -98,6 +102,7 @@ def extract_day_date(df_, list):
     return df_
 
 def create_datetime(df):
+    """change Buddhist year to Christian year and change the column type to be pd.datetime"""
     df = df[(df.time.str.len() < 10)]
     date_list = df['date'].str.split('/', 2, expand=True)
     df['day'] = date_list[0]
@@ -115,6 +120,7 @@ def create_datetime(df):
 
 @st.cache
 def count_word(df):
+    """count number of unique words"""
     result = []
     df_ = df.copy()
     df_['chat'] = df_['chat'].astype('str')
@@ -124,6 +130,8 @@ def count_word(df):
     df_word = pd.DataFrame(words,columns=['words'])
     return df_word
 
+
+# start streamlit web application
 st.header('Upload line chat file (.txt)')
 uploaded_file = st.file_uploader("Upload line chat file (.txt)")
 if uploaded_file is None:
@@ -137,61 +145,48 @@ if uploaded_file is not None:
         print('Upload line chat.txt file only!!')
 
 
-
-# personal chat
+# personal chat only
 text = StringIO(deEmojify(string_data))
 df = pd.read_csv(text, sep="\t", header=None, names=["time", "name", "chat"])
-df = df.iloc[2:]
-df.reset_index(inplace=True, drop=True)
-# st.write(df.head())
+df = df.iloc[2:] # the first 2 rows of data is unusable
 df.reset_index(inplace=True)
 df['date'] = create_date(df['time'].values)
 df = extract_day_date(df, df['date'])
-null = df[(df.isnull().any(axis=1))&(df.time.str.len() > 10)]
+
+
+# create chat in a day feature
+chat_day= df[(df.isnull().any(axis=1))&(df.time.str.len() > 10)]
 df = create_datetime(df)
-null.drop(columns=['name','chat'],inplace=True)
-# st.write(null.head())
-
-temp =  null['index'].iloc[1:].values
-null = null[:-1]
-null['diff_chat'] = temp
-# st.write(null.head())
-
-null['chat in a day'] = null['diff_chat'] - null['index']
-null = null.set_index('time')
-null = null.sort_values(by = 'chat in a day', ascending = False)
-null = extract_day_date(null, null.index)
+chat_day.drop(columns=['name','chat'],inplace=True)
+temp =  chat_day['index'].iloc[1:].values
+chat_day = chat_day[:-1]
+chat_day['diff_chat'] = temp
+chat_day['chat in a day'] = chat_day['diff_chat'] - chat_day['index']
+chat_day = chat_day.set_index('time')
+chat_day = chat_day.sort_values(by = 'chat in a day', ascending = False)
+chat_day = extract_day_date(chat_day, chat_day.index)
 
 # call time
-
-sd = df[df["time"].str.contains("BE")]
-# st.write(sd.head())
-# st.write(sd.shape)
-
 try:
     df2 = df.copy()
     df2.dropna(inplace=True)
-    dc = df2[df2["chat"].str.contains("☎ Call time")]
-    dc = dc[dc['chat'].str.len() < 30]
+    call_time = df2[df2["chat"].str.contains("☎ Call time")]
+    call_time = call_time[call_time['chat'].str.len() < 30]
     df['chat'] = df['chat'].astype('str')
-
-    new = dc["chat"].str.split("e", n = 1, expand = True)
-    dc["call time"]= new[1]
-
-    dc['call second'] = dc['call time'].apply(lambda x: fix_call(x))
-    dc = dc.sort_values(by='call second', ascending=False)
-    dc.reset_index(inplace=True)
-except:
+    new = call_time["chat"].str.split("e", n = 1, expand = True)
+    call_time["call time"]= new[1]
+    call_time['call second'] = call_time['call time'].apply(lambda x: fix_call(x))
+    call_time = call_time.sort_values(by='call second', ascending=False)
+    call_time.reset_index(inplace=True)
+except: # for chat that never call
     pass
 
 
-# count time
-
-value = df['chat'].value_counts().index.tolist()
+# for wordcloud
+wordcloud_value = df['chat'].value_counts().index.tolist()
 
 
 # plot graph
-
 st.header('Top messages')
 count= st.slider('top message:', min_value=0, max_value=100, step=1, value=20)
 df = df[df['chat'] != 'nan']
@@ -207,10 +202,10 @@ if st.button('Top words (take 1-2 minutes)'):
     try:
         count= st.slider('top words:', min_value=0, max_value=100, step=1, value=20)
         df_word = count_word(df)
-        fig1 = px.bar(df_word['words'].value_counts()[1:count],title='Count chat', text_auto='s')
-        fig1.update_traces(marker_color='#ff6961')
-        fig1.update_layout(template = 'plotly_white')
-        st.plotly_chart(fig1)
+        fig2 = px.bar(df_word['words'].value_counts()[1:count],title='Count chat', text_auto='s')
+        fig2.update_traces(marker_color='#ff6961')
+        fig2.update_layout(template = 'plotly_white')
+        st.plotly_chart(fig2)
     except:
         pass
 else:
@@ -218,13 +213,13 @@ else:
 
 st.header('Top time')
 count= st.slider('top time:', min_value=0, max_value=100, step=1, value=20)
-fig6 = px.bar(df['time'].value_counts()[:count],title='Count time', text_auto='s')
-fig6.update_traces(marker_color='#ff6961')
-fig6.update_layout(template = 'plotly_white')
-st.plotly_chart(fig6)
+fig3 = px.bar(df['time'].value_counts()[:count],title='Count time', text_auto='s')
+fig3.update_traces(marker_color='#ff6961')
+fig3.update_layout(template = 'plotly_white')
+st.plotly_chart(fig3)
 
 
-st.header('Chat by time')
+st.header('Number of chat by time')
 option = st.selectbox(
      'Group data by: ',
      ('hour','time', 'day', 'dow', 'month', 'year'))
@@ -239,66 +234,79 @@ grouped_chat_weekend = df_plot_weekend.groupby(option).agg({"name": "count"})
 grouped_chat_weekend[option] = grouped_chat_weekend.index
 if plot_type  == 'Average':
     grouped_chat_weekend['name'] = grouped_chat_weekend['name']/2
-fig6 = go.Figure()
-fig6.add_trace(go.Scatter(y=grouped_chat_weekday['name'].values, x=grouped_chat_weekday[option].values
+fig4 = go.Figure()
+fig4.add_trace(go.Scatter(y=grouped_chat_weekday['name'].values, x=grouped_chat_weekday[option].values
                               , mode='lines', name='weekday lines'))
-fig6.add_trace(go.Scatter(y=grouped_chat_weekend['name'].values, x=grouped_chat_weekend[option].values
+fig4.add_trace(go.Scatter(y=grouped_chat_weekend['name'].values, x=grouped_chat_weekend[option].values
                               , mode='lines', name='weekend lines'))
-fig6.update_xaxes(rangeslider_visible=True)
-fig6.update_layout(template='plotly_white')
-st.plotly_chart(fig6)
+fig4.update_xaxes(rangeslider_visible=True)
+fig4.update_layout(template='plotly_white')
+st.plotly_chart(fig4)
+
 
 bar_type = st.radio("Choose bar type",('stack', 'group', 'overlay', 'relative'))
-fig = go.Figure(data=[
+fig5 = go.Figure(data=[
     go.Bar(name='weekday', y=grouped_chat_weekday['name'].values, x=grouped_chat_weekday[option].values
            , text=grouped_chat_weekday['name'].values),
     go.Bar(name='weekend', y=grouped_chat_weekend['name'].values, x=grouped_chat_weekend[option].values
            , text=grouped_chat_weekend['name'].values)
 ])
-fig.update_layout(barmode=bar_type)
-fig.update_traces(texttemplate='%{text:.2s}', textposition='outside')
-fig.update_layout(template = 'plotly_white')
-st.plotly_chart(fig)
+fig5.update_layout(barmode=bar_type)
+fig5.update_traces(texttemplate='%{text:.2s}', textposition='outside')
+fig5.update_layout(template = 'plotly_white')
+st.plotly_chart(fig5)
+
 
 st.header('Top chat in a day count')
 day_type = st.radio("Weekday or Weekend",('Weekday', 'Weekend'))
 if day_type  == 'Weekday':
-     null_plot = null[null['is_weekday'] == 1]
+     chat_day_plot = chat_day[chat_day['is_weekday'] == 1]
 else:
-     null_plot = null[null['is_weekday'] == 0]
+     chat_day_plot = chat_day[chat_day['is_weekday'] == 0]
 count= st.slider('top chat in a day count:', min_value=0, max_value=100, step=1, value=20)
-fig12 = px.bar(null_plot['chat in a day'][:count],title='Chat in a day', text_auto='s')
-fig12.update_traces(marker_color='#ff6961')
-fig12.update_layout(template = 'plotly_white')
-st.plotly_chart(fig12)
-df = df[df['time'].notna()]
+fig6 = px.bar(chat_day_plot['chat in a day'][:count],title='Chat in a day', text_auto='s')
+fig6.update_traces(marker_color='#ff6961')
+fig6.update_layout(template = 'plotly_white')
+st.plotly_chart(fig6)
+
 
 
 pie_chart = df.groupby('dow').agg({"chat":"count"})
-fig14 = go.Figure(
+fig7 = go.Figure(
     data=[go.Pie(labels=pie_chart.index, values=pie_chart['chat'], hole=0.4, textinfo='label+percent', insidetextorientation='radial')])
-st.plotly_chart(fig14)
+st.plotly_chart(fig7)
 
 try:
     st.header('Top count call time')
     count= st.slider('top count call time:', min_value=0, max_value=100, step=1, value=20)
-    fig7 = px.bar(dc['call second'][:count],title='Count call time', text_auto='s')
-    fig7.update_traces(marker_color='#ff6961')
-    fig7.update_layout(template = 'plotly_white')
-    st.plotly_chart(fig7)
+    fig8 = px.bar(call_time['call second'][:count],title='Count call time', text_auto='s')
+    fig8.update_traces(marker_color='#ff6961')
+    fig8.update_layout(template = 'plotly_white')
+    st.plotly_chart(fig8)
 except:
     pass
 
 try:
     st.header("Fun fact")
-    col1, col2, col3 = st.columns(3)
-    col1.metric(label="Cumulative call time (second)", value=str(dc['call second'].sum()))
-    col2.metric(label="Total chat", value=str(df['name'].count()))
-    col3.metric(label="Top chat by", value=f"{str(df['name'].value_counts().index[0])} : {str(df['name'].value_counts()[0])} ")
+    col1, col2, col3= st.columns(3)
+
+    col1.metric(label="Total chat", value=str(df['chat'].count()))
+    col2.metric(label="Top chat by", value=f"{str(df['name'].value_counts().index[0])} : {str(df['name'].value_counts()[0])} ")
+    col3.metric(label="Total photos", value = len(df[df['chat']=='[Photo]']))
+
+    col1.metric(label="Total stickers", value = len(df[df['chat']=='[Sticker]']))
+    col2.metric(label="Total videos", value=len(df[df['chat'] == '[Video]']))
+    col3.metric(label="Total call", value=len(call_time))
+
+    col1.metric(label="Total missed call", value=len(df[df['chat'] == '☎ Missed call']))
+    col2.metric(label="Total canceled call", value = len(df[df['chat']=='☎ Canceled call']))
+    col3.metric(label="Cumulative call time (second)", value=str(call_time['call second'].sum()))
+
+
 except:
     pass
 
-mostcommon = value[:100]
+mostcommon = wordcloud_value[:100]
 wordcloud = WordCloud( font_path='assets/THSarabunNew.ttf', width=1600, height=800, background_color='white',regexp=r"[\u0E00-\u0E7Fa-zA-Z']+",colormap='Set2').generate(str(mostcommon))
 wordcloud.to_file('wordcloud.png')
 image = Image.open('wordcloud.png')
@@ -336,8 +344,6 @@ if st.button('Train model'):
     X = pad_sequences(X, maxlen=MAX_SEQUENCE_LENGTH)
     Y = pd.get_dummies(df['name']).values
     X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.10, random_state=42)
-
-
 
     model = Sequential()
     model.add(Embedding(MAX_WORDS, EMBEDDING_DIM, input_length=X_train.shape[1]))
