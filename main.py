@@ -48,7 +48,7 @@ def get_predict(X_test):
         MAX_SEQUENCE_LENGTH = 10
         loaded_model = pickle.load(open(filename, 'rb'))
         tokenizer = Tokenizer(num_words=MAX_WORDS, filters='!"#$%&()*+,-./:;<=>?@[\]^_`{|}~')
-        tokenizer.fit_on_texts(df.c.values)
+        tokenizer.fit_on_texts(df.chat.values)
         X_test = [X_test]
         X_test=tokenizer.texts_to_sequences(X_test)
         X_test=pad_sequences(X_test, maxlen=MAX_SEQUENCE_LENGTH)
