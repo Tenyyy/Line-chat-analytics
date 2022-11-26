@@ -10,7 +10,6 @@ import plotly.graph_objects as go
 from wordcloud import WordCloud, STOPWORDS, ImageColorGenerator
 import numpy as np
 from PIL import Image
-from wordcloud import WordCloud, STOPWORDS, ImageColorGenerator
 import pickle
 import json
 import requests
@@ -235,6 +234,8 @@ grouped_chat_weekend[option] = grouped_chat_weekend.index
 if plot_type  == 'Average':
     grouped_chat_weekend['name'] = grouped_chat_weekend['name']/2
 fig4 = go.Figure()
+
+
 fig4.add_trace(go.Scatter(y=grouped_chat_weekday['name'].values, x=grouped_chat_weekday[option].values
                               , mode='lines', name='weekday lines'))
 fig4.add_trace(go.Scatter(y=grouped_chat_weekend['name'].values, x=grouped_chat_weekend[option].values
@@ -257,6 +258,22 @@ fig5.update_layout(template = 'plotly_white')
 st.plotly_chart(fig5)
 
 
+st.header('Chat type by time')
+chat_type = ['[Photo]','[Sticker]', '[Video]', '☎ Missed call', '☎ Canceled call', '[File]', '[Voice message]', '[Location]', '[Contact]', '[GIF]', '[Link]', '[☎ No answer]']
+fig6 = go.Figure()
+for i in chat_type:
+    grouped_chat= df[df['chat'] == i]
+    grouped_chat= grouped_chat.groupby(option).agg({"name": "count"})
+    grouped_chat[option] = grouped_chat.index
+    if plot_type == 'Average':
+        grouped_chat['name'] = grouped_chat['name'] / 7
+    fig6.add_trace(go.Scatter(y=grouped_chat['name'].values, x=grouped_chat[option].values
+                              , mode='lines', name=f'{i}'))
+fig6.update_xaxes(rangeslider_visible=True)
+fig6.update_layout(template='plotly_white')
+st.plotly_chart(fig6)
+
+
 st.header('Top chat in a day count')
 day_type = st.radio("Weekday or Weekend",('Weekday', 'Weekend'))
 if day_type  == 'Weekday':
@@ -264,25 +281,25 @@ if day_type  == 'Weekday':
 else:
      chat_day_plot = chat_day[chat_day['is_weekday'] == 0]
 count= st.slider('top chat in a day count:', min_value=0, max_value=100, step=1, value=20)
-fig6 = px.bar(chat_day_plot['chat in a day'][:count],title='Chat in a day', text_auto='s')
-fig6.update_traces(marker_color='#ff6961')
-fig6.update_layout(template = 'plotly_white')
-st.plotly_chart(fig6)
+fig7 = px.bar(chat_day_plot['chat in a day'][:count],title='Chat in a day', text_auto='s')
+fig7.update_traces(marker_color='#ff6961')
+fig7.update_layout(template = 'plotly_white')
+st.plotly_chart(fig7)
 
 
 
 pie_chart = df.groupby('dow').agg({"chat":"count"})
-fig7 = go.Figure(
+fig8 = go.Figure(
     data=[go.Pie(labels=pie_chart.index, values=pie_chart['chat'], hole=0.4, textinfo='label+percent', insidetextorientation='radial')])
-st.plotly_chart(fig7)
+st.plotly_chart(fig8)
 
 try:
     st.header('Top count call time')
     count= st.slider('top count call time:', min_value=0, max_value=100, step=1, value=20)
-    fig8 = px.bar(call_time['call second'][:count],title='Count call time', text_auto='s')
-    fig8.update_traces(marker_color='#ff6961')
-    fig8.update_layout(template = 'plotly_white')
-    st.plotly_chart(fig8)
+    fig9 = px.bar(call_time['call second'][:count],title='Count call time', text_auto='s')
+    fig9.update_traces(marker_color='#ff6961')
+    fig9.update_layout(template = 'plotly_white')
+    st.plotly_chart(fig9)
 except:
     pass
 
@@ -302,6 +319,13 @@ try:
     col2.metric(label="Total canceled call", value = len(df[df['chat']=='☎ Canceled call']))
     col3.metric(label="Cumulative call time (second)", value=str(call_time['call second'].sum()))
 
+    col1.metric(label="Total File", value=len(df[df['chat'] == '[File]']))
+    col2.metric(label="Total Voice message", value = len(df[df['chat']=='[Voice message]']))
+    col3.metric(label="Total Location", value=len(df[df['chat'] == '[Location]']))
+
+    col1.metric(label="Total Contact", value=len(df[df['chat'] == '[Contact]']))
+    col2.metric(label="Total GIF", value=len(df[df['chat'] == '[GIF]']))
+    col3.metric(label="Total Link", value=len(df[df['chat'] == '[Link]']))
 
 except:
     pass
