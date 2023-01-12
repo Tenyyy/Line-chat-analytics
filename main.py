@@ -189,11 +189,15 @@ wordcloud_value = df['chat'].value_counts().index.tolist()
 st.header('Top messages')
 count= st.slider('top message:', min_value=0, max_value=100, step=1, value=20)
 df = df[df['chat'] != 'nan']
-fig1 = px.bar(df['chat'].value_counts()[:count],title='Count chat', text_auto='s')
-fig1.update_traces(marker_color='#ff6961')
+# fig1 = px.bar(df['chat'].value_counts()[:count],title='Count chat', text_auto='s')
+# fig1.update_traces(marker_color='#ff6961')
+# fig1.update_layout(template = 'plotly_white')
+# st.plotly_chart(fig1)
+
+df_temp = df[df['chat'].isin((df['chat'].value_counts()[:count].index.tolist()))]
+fig1 = px.histogram(df_temp,x='chat',title='Count chat', text_auto='s',color='name').update_xaxes(categoryorder="total descending")
 fig1.update_layout(template = 'plotly_white')
 st.plotly_chart(fig1)
-
 
 
 st.header('Top words')
