@@ -14,6 +14,20 @@ import pickle
 import json
 import requests
 import deepcut
+from pythainlp import word_tokenize
+from pythainlp.corpus import thai_stopwords
+from sklearn.preprocessing import LabelEncoder
+from collections import Counter
+from keras.preprocessing.text import Tokenizer
+from sklearn.model_selection import train_test_split
+from keras.preprocessing.text import Tokenizer
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+from keras.models import Sequential
+from keras.layers import Dense
+from keras.layers import LSTM
+from keras.layers import Embedding
+from keras.layers import SpatialDropout1D
+from keras.layers import Embedding
 
 
 
@@ -37,24 +51,40 @@ def who_write(array):
     name = df['name'].unique()
     return name[max_index]
 
+
+def load_tokenizer_and_model(MAX_WORDS):
+    filename = 'model.sav'
+    with open(filename, 'rb') as file:
+        loaded_model = pickle.load(file)
+
+    # Load the PyThaiNLP tokenizer's word_index from a JSON file
+    with open('word_index.json', 'r', encoding='utf-8') as f:
+        word_index = json.load(f)
+
+    # Create a Keras tokenizer with the PyThaiNLP tokenizer's word_index
+    tokenizer = Tokenizer(num_words=MAX_WORDS, filters='!"#$%&()*+,-./:;<=>?@[\]^_`{|}~')
+    tokenizer.word_index = word_index
+
+    return tokenizer, loaded_model
+
+
 def get_predict(X_test):
     """load and predict value of the text classification"""
     if X_test == '...':
         return '...'
     else:
-        filename = 'model.sav'
         MAX_WORDS = 2500
         MAX_SEQUENCE_LENGTH = 10
-        loaded_model = pickle.load(open(filename, 'rb'))
-        tokenizer = Tokenizer(num_words=MAX_WORDS, filters='!"#$%&()*+,-./:;<=>?@[\]^_`{|}~')
-        tokenizer.fit_on_texts(df.chat.values)
-        X_test = [X_test]
+        tokenizer, loaded_model = load_tokenizer_and_model(MAX_WORDS)
+
+        # Use the custom tokenize_thai function
+        X_test = [' '.join(tokenize_thai(X_test))]
+        
         X_test=tokenizer.texts_to_sequences(X_test)
         X_test=pad_sequences(X_test, maxlen=MAX_SEQUENCE_LENGTH)
         result = loaded_model.predict(X_test)
         who = who_write(result)
     return who
-
 
 def fix_call(x):
     """create a call time feature in second unit"""
@@ -70,6 +100,10 @@ def fix_call(x):
         substring3 = split_string[2]
         second = int(substring1)*60*60 + int(substring2)*60 + int(substring3)
     return second
+
+# Tokenize the text using PyThaiNLP's 'newmm' tokenizer
+def tokenize_thai(text):
+    return word_tokenize(text, engine='newmm')
 
 def create_date(list):
     """create date column"""
@@ -189,25 +223,24 @@ wordcloud_value = df['chat'].value_counts().index.tolist()
 st.header('Top messages')
 count= st.slider('top message:', min_value=0, max_value=100, step=1, value=20)
 df = df[df['chat'] != 'nan']
-# fig1 = px.bar(df['chat'].value_counts()[:count],title='Count chat', text_auto='s')
-# fig1.update_traces(marker_color='#ff6961')
-# fig1.update_layout(template = 'plotly_white')
-# st.plotly_chart(fig1)
-
 df_temp = df[df['chat'].isin((df['chat'].value_counts()[:count].index.tolist()))]
 fig1 = px.histogram(df_temp,x='chat',title='Count chat', text_auto='s',color='name').update_xaxes(categoryorder="total descending")
 fig1.update_layout(template = 'plotly_white')
 st.plotly_chart(fig1)
 
-
+# Most frequently used words
 st.header('Top words')
-if st.button('Top words (take 1-2 minutes)'):
+if st.button('Top words (may take a while depending on the number of chats)'):
     try:
         count= st.slider('top words:', min_value=0, max_value=100, step=1, value=20)
-        df_word = count_word(df)
-        fig2 = px.bar(df_word['words'].value_counts()[1:count],title='Count chat', text_auto='s')
+        words = " ".join(df["chat"]).lower()
+        tokenized_words = word_tokenize(words, keep_whitespace=False)
+        word_count = Counter(tokenized_words)
+        most_common_words = word_count.most_common(count)
+        word_df = pd.DataFrame(most_common_words, columns=["word", "count"])
+        fig2 = px.bar(word_df, x="word", y="count", title="Most Frequently Used Words")
         fig2.update_traces(marker_color='#ff6961')
-        fig2.update_layout(template = 'plotly_white')
+        fig2.update_layout(template="plotly_white")
         st.plotly_chart(fig2)
     except:
         pass
@@ -291,14 +324,14 @@ fig7.update_layout(template = 'plotly_white')
 st.plotly_chart(fig7)
 
 
-
+df = df[df['dow'].str.len() < 10]
 pie_chart = df.groupby('dow').agg({"chat":"count"})
 fig8 = go.Figure(
     data=[go.Pie(labels=pie_chart.index, values=pie_chart['chat'], hole=0.4, textinfo='label+percent', insidetextorientation='radial')])
 st.plotly_chart(fig8)
 
 try:
-    st.header('Top count call time')
+    st.header('Top call time (second)')
     count= st.slider('top count call time:', min_value=0, max_value=100, step=1, value=20)
     fig9 = px.bar(call_time['call second'][:count],title='Count call time', text_auto='s')
     fig9.update_traces(marker_color='#ff6961')
@@ -307,13 +340,60 @@ try:
 except:
     pass
 
+# Distribution of chat messages per user
+st.header("Number of Messages per User")
+fig10 = px.histogram(df, x="name", title="Number of Messages per User", text_auto="s", nbins=len(df["name"].unique()), color="name")
+fig10.update_layout(template="plotly_white")
+st.plotly_chart(fig10)
+
+
+# Average message length per user
+st.header("Average Message Length per User")
+df["msg_length"] = df["chat"].apply(len)
+average_msg_length = df.groupby("name")["msg_length"].mean().reset_index()
+fig11 = px.bar(average_msg_length, x="name", y="msg_length", title="Average Message Length per User")
+fig11.update_layout(template="plotly_white")
+fig11.update_traces(marker_color='#ff6961')
+st.plotly_chart(fig11)
+
+# Heatmap of message activity
+st.header("Message Activity Heatmap")
+df["hour"] = df["datetime"].dt.hour
+df["day"] = df["datetime"].dt.day_name()
+heatmap_data = df.groupby(["day", "hour"]).size().reset_index(name="count")
+heatmap_data = heatmap_data.pivot(index="day", columns="hour", values="count")
+fig12 = px.imshow(heatmap_data, title="Message Activity Heatmap")
+fig12.update_layout(template="plotly_white")
+st.plotly_chart(fig12)
+
+
+
 try:
     st.header("Fun fact")
+    stopwords = thai_stopwords()
+
+    # Longest message
+    df['message_length'] = df['chat'].apply(lambda x: len(x))
+    longest_message = df['message_length'].max()
+
+    # Most common words
+    all_words = [word for text in df['chat'].apply(tokenize_thai) for word in text if word not in stopwords and not (word.startswith('[') or word.endswith(']') or (word == 'Sticker') or (word == 'Photo') or (word == ' ') or (word == ':'))]
+    word_counter = Counter(all_words)
+    top_n_words = 1
+    most_common_words = word_counter.most_common(top_n_words)
+
+    # Average message length
+    average_message_length = df['message_length'].mean()
+
     col1, col2, col3= st.columns(3)
 
     col1.metric(label="Total chat", value=str(df['chat'].count()))
     col2.metric(label="Top chat by", value=f"{str(df['name'].value_counts().index[0])} : {str(df['name'].value_counts()[0])} ")
     col3.metric(label="Total photos", value = len(df[df['chat']=='[Photo]']))
+
+    col1.metric(label="Longest message", value=longest_message)
+    col2.metric(label="Top {} most common words".format(top_n_words), value=', '.join([f"{word[0]}: {word[1]}" for word in most_common_words]))
+    col3.metric(label="Average message length", value="{:.2f}".format(average_message_length))
 
     col1.metric(label="Total stickers", value = len(df[df['chat']=='[Sticker]']))
     col2.metric(label="Total videos", value=len(df[df['chat'] == '[Video]']))
@@ -347,27 +427,16 @@ st.image(image, caption='Wordcloud of top messages')
 #train model
 st.header('Train LSTM model to predict word')
 if st.button('Train model'):
-    from keras.preprocessing.text import Tokenizer
-    from sklearn.model_selection import train_test_split
-    from keras.preprocessing.text import Tokenizer
-    from tensorflow.keras.preprocessing.sequence import pad_sequences
-    from keras.models import Sequential
-    from keras.layers import Dense
-    from keras.layers import Flatten
-    from keras.layers import LSTM
-    from keras.layers import Embedding
-    from keras.layers import SpatialDropout1D
-    from keras.models import Sequential
-    from keras.layers import Embedding
     train_model_state = st.text('Training model...')
     MAX_WORDS = 2500
     MAX_SEQUENCE_LENGTH = 10
     EMBEDDING_DIM = 100
 
     tokenizer = Tokenizer(num_words=MAX_WORDS, filters='!"#$%&()*+,-./:;<=>?@[\]^_`{|}~')
-    tokenizer.fit_on_texts(df.chat.values)
+    texts = [' '.join(tokenize_thai(text)) for text in df.chat.values]
+    tokenizer.fit_on_texts(texts)
     word_index = tokenizer.word_index
-    X = tokenizer.texts_to_sequences(df.chat.values)
+    X = tokenizer.texts_to_sequences(texts)
 
     X = pad_sequences(X, maxlen=MAX_SEQUENCE_LENGTH)
     Y = pd.get_dummies(df['name']).values
@@ -388,6 +457,10 @@ if st.button('Train model'):
     accr = model.evaluate(X_test, Y_test)
     st.write('Test set\n  Loss: {:0.3f}\n  Accuracy: {:0.3f}'.format(accr[0], accr[1]))
 
+    # Save the PyThaiNLP tokenizer's word_index to a JSON file
+    with open('word_index.json', 'w', encoding='utf-8') as f:
+        json.dump(tokenizer.word_index, f, ensure_ascii=False, indent=4)
+
     # save the model to disk
     filename = 'model.sav'
     pickle.dump(model, open(filename, 'wb'))
@@ -396,10 +469,7 @@ else:
     pass
 
 text = st.text_input('Any words', '...')
-try:
-    from keras.preprocessing.text import Tokenizer
-    from tensorflow.keras.preprocessing.sequence import pad_sequences
-    predicted = get_predict(str(text))
-    st.write(f"Predicted writer: {predicted}")
-except:
-    st.write("Train model first!!")
+
+
+predicted = get_predict(str(text))
+st.write(f"Predicted writer: {predicted}")
