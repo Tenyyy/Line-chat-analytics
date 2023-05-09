@@ -121,8 +121,8 @@ def extract_day_date(df_, list):
     """extract date feature from string and create is_weekend feature"""
     date_list = list
     day_list = list
-    date_list = date_list.str.split(' ', 2, expand=True)
-    day_list = day_list.str.split(',', 1, expand=True)
+    date_list = date_list.str.split(' ', n=2, expand=True)
+    day_list = day_list.str.split(',', n=1, expand=True)
     try:
         df_['date'] = date_list[1]
         df_['dow'] = day_list[0]
@@ -137,7 +137,7 @@ def extract_day_date(df_, list):
 def create_datetime(df):
     """change Buddhist year to Christian year and change the column type to be pd.datetime"""
     df = df[(df.time.str.len() < 10)]
-    date_list = df['date'].str.split('/', 2, expand=True)
+    date_list = df['date'].str.split('/', n=2, expand=True)
     df['day'] = date_list[0]
     df['month'] = date_list[1]
     df['year'] = date_list[2]
