@@ -142,7 +142,8 @@ def create_datetime(df):
     df['month'] = date_list[1]
     df['year'] = date_list[2]
     df['year'] = df['year'].astype('int')
-    df['year'] = df['year'] - 543
+    if df['year'].max() > 2500:
+        df['year'] = df['year'] - 543
     df['year'] = df['year'].astype('str')
     df['datetime'] = df['day'] + '/' + df['month'] + '/' + df['year'] + ' ' + df['time']
     df['datetime'] = pd.to_datetime(df['datetime'], errors='coerce')
