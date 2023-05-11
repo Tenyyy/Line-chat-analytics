@@ -9,3 +9,6 @@ tensorflow
 scikit-learn
 deepcut
 pythainlp
+textblob
+spacy
+langdetect

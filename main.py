@@ -14,6 +14,9 @@ import pickle
 import json
 import requests
 import deepcut
+from textblob import TextBlob
+import spacy
+from langdetect import detect
 from pythainlp import word_tokenize
 from pythainlp.corpus import thai_stopwords
 from sklearn.preprocessing import LabelEncoder
@@ -28,7 +31,7 @@ from keras.layers import LSTM
 from keras.layers import Embedding
 from keras.layers import SpatialDropout1D
 from keras.layers import Embedding
-
+import download_spacy_models
 
 
 
@@ -101,6 +104,30 @@ def fix_call(x):
         second = int(substring1)*60*60 + int(substring2)*60 + int(substring3)
     return second
 
+def get_language(text):
+    try:
+        lang = detect(text)
+    except:
+        lang = "unknown"
+    return lang
+
+def get_sentiment(text, language):
+    if language == "en":
+        blob = TextBlob(text)
+        sentiment = blob.sentiment.polarity
+    else:
+        sentiment = None
+    return sentiment
+
+def get_keywords(text, language):
+    if language == "en":
+        doc = nlp_en(text)
+    else:
+        doc = nlp_multilingual(text)
+    
+    keywords = [token.lemma_ for token in doc if token.is_stop == False and token.is_punct == False]
+    return keywords
+
 # Tokenize the text using PyThaiNLP's 'newmm' tokenizer
 def tokenize_thai(text):
     return word_tokenize(text, engine='newmm')
@@ -149,7 +176,6 @@ def create_datetime(df):
     df['datetime'] = pd.to_datetime(df['datetime'], errors='coerce')
     df['hour'] = df['datetime'].dt.hour
     df['time'] = df['time'].astype('str')
-    st.write(df)
     return df
 
 @st.cache
@@ -164,6 +190,9 @@ def count_word(df):
     df_word = pd.DataFrame(words,columns=['words'])
     return df_word
 
+@st.experimental_memo
+def convert_df(df):
+   return df.to_csv(index=False).encode('utf-8')
 
 # start streamlit web application
 st.header('Upload line chat file (.txt)')
@@ -191,6 +220,75 @@ df = extract_day_date(df, df['date'])
 # create chat in a day feature
 chat_day= df[(df.isnull().any(axis=1))&(df.time.str.len() > 10)]
 df = create_datetime(df)
+st.write(df)
+
+csv = convert_df(df)
+
+st.download_button(
+   "Press to Download",
+   csv,
+   "file.csv",
+   "text/csv",
+   key='download-csv'
+)
+
+# Sentiment Analysis
+st.header('Sentiment Analysis (for English chat only)')
+if st.button('Sentiment Analysis'):
+    try:
+        # Load language models
+        nlp_en = spacy.load("en_core_web_sm")
+        nlp_multilingual = spacy.load("xx_ent_wiki_sm")
+
+        # Load your DataFrame (replace with your actual DataFrame)
+        chat_type = ['[Photo]','[Sticker]', '[Video]', '☎ Missed call', '☎ Canceled call', '[File]', '[Voice message]', '[Location]', '[Contact]', '[GIF]', '[Link]', '[☎ No answer]']
+        # Get language, sentiment, and keywords for each message
+        df['language'] = df['chat'].apply(get_language)
+        df['sentiment'] = df.apply(lambda row: get_sentiment(row['chat'], row['language']), axis=1)
+        df['sentiment_cleaned'] = np.where((~df['chat'].isin(chat_type))&(df['language']=='en'), True, False)
+        df['keywords'] = df.apply(lambda row: get_keywords(row['chat'], row['language']), axis=1)
+
+        def visualize_sentiment(df):
+            # Remove rows with missing sentiment values (i.e., non-English text)
+            df_filtered = df.dropna(subset=['sentiment'])
+            df_filtered = df_filtered[df_filtered['sentiment_cleaned']==True]
+
+            # Create a histogram of sentiment scores
+            fig = px.histogram(df_filtered, x='sentiment', color='name', nbins=50, title='Sentiment Score Distribution')
+
+            # Set the x-axis range to cover the entire sentiment range
+            fig.update_xaxes(range=[-1, 1])
+            fig.update_layout(barmode='group', xaxis_title='Sentiment Score', yaxis_title='Count')
+
+            return fig
+
+        # Streamlit app
+        st.title("Sentiment Analysis Visualization")
+        st.write("This part visualizes the sentiment scores of text messages")
+        st.write("A value of -1 indicates a highly negative sentiment")
+        st.write("A value of 0 indicates a neutral sentiment")
+        st.write("A value of 1 indicates a highly positive sentiment")
+        
+
+        # Visualize the sentiment distribution
+        fig = visualize_sentiment(df)
+        st.plotly_chart(fig)
+
+        unique_name = df['name'].unique()
+        for i in unique_name:
+            i = str(i)
+            if i == 'nan':
+                pass
+            else:
+                average_sentiment = round(df[df['name']==i]['sentiment'].mean(),2)
+                st.write('Average sentiment score of', i, 'is', average_sentiment)
+    except:
+        pass
+else:
+    pass
+
+
+
 chat_day.drop(columns=['name','chat'],inplace=True)
 temp =  chat_day['index'].iloc[1:].values
 chat_day = chat_day[:-1]
