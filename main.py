@@ -31,6 +31,7 @@ from keras.layers import LSTM
 from keras.layers import Embedding
 from keras.layers import SpatialDropout1D
 from keras.layers import Embedding
+import plotly.graph_objects as go
 import download_spacy_models
 
 
@@ -107,8 +108,9 @@ def fix_call(x):
 def get_language(text):
     try:
         lang = detect(text)
-    except:
+    except Exception as e:
         lang = "unknown"
+        st.warning(f"Error detecting language: {e}")
     return lang
 
 def get_sentiment(text, language):
@@ -354,28 +356,64 @@ fig3.update_layout(template = 'plotly_white')
 st.plotly_chart(fig3)
 
 
+# st.header('Number of chat by time')
+# option = st.selectbox(
+#      'Group data by: ',
+#      ('hour','time', 'day', 'dow', 'month', 'year'))
+# plot_type = st.radio("Average or Cumulative",('Average', 'Cumulative'))
+# df_plot_weekday = df[df['is_weekday'] == 1]
+# df_plot_weekend = df[df['is_weekday'] == 0]
+# grouped_chat_weekday = df_plot_weekday.groupby(option).agg({"name": "count"})
+# grouped_chat_weekday[option] = grouped_chat_weekday.index
+# if plot_type  == 'Average':
+#     grouped_chat_weekday['name'] = grouped_chat_weekday['name']/5
+# grouped_chat_weekend = df_plot_weekend.groupby(option).agg({"name": "count"})
+# grouped_chat_weekend[option] = grouped_chat_weekend.index
+# if plot_type  == 'Average':
+#     grouped_chat_weekend['name'] = grouped_chat_weekend['name']/2
+# fig4 = go.Figure()
+
+
+# fig4.add_trace(go.Scatter(y=grouped_chat_weekday['name'].values, x=grouped_chat_weekday[option].values
+#                               , mode='lines', name='weekday lines'))
+# fig4.add_trace(go.Scatter(y=grouped_chat_weekend['name'].values, x=grouped_chat_weekend[option].values
+#                               , mode='lines', name='weekend lines'))
+# fig4.update_xaxes(rangeslider_visible=True)
+# fig4.update_layout(template='plotly_white')
+# st.plotly_chart(fig4)
+
+
+
 st.header('Number of chat by time')
 option = st.selectbox(
      'Group data by: ',
-     ('hour','time', 'day', 'dow', 'month', 'year'))
-plot_type = st.radio("Average or Cumulative",('Average', 'Cumulative'))
+     ('hour', 'day', 'dow', 'month', 'year'))  # Removed 'time' as it might not be suitable for grouping
+plot_type = st.radio("Average or Cumulative", ('Average', 'Cumulative'))
+
 df_plot_weekday = df[df['is_weekday'] == 1]
 df_plot_weekend = df[df['is_weekday'] == 0]
-grouped_chat_weekday = df_plot_weekday.groupby(option).agg({"name": "count"})
-grouped_chat_weekday[option] = grouped_chat_weekday.index
-if plot_type  == 'Average':
-    grouped_chat_weekday['name'] = grouped_chat_weekday['name']/5
-grouped_chat_weekend = df_plot_weekend.groupby(option).agg({"name": "count"})
-grouped_chat_weekend[option] = grouped_chat_weekend.index
-if plot_type  == 'Average':
-    grouped_chat_weekend['name'] = grouped_chat_weekend['name']/2
+
+# Grouping and calculating counts
+grouped_chat_weekday = df_plot_weekday.groupby(option).agg({"name": "count"}).reset_index()
+grouped_chat_weekend = df_plot_weekend.groupby(option).agg({"name": "count"}).reset_index()
+
+if plot_type == 'Average':
+    # Handling Zero Division
+    grouped_chat_weekday['name'] = grouped_chat_weekday['name'] / 5 if len(df_plot_weekday) > 0 else 0
+    grouped_chat_weekend['name'] = grouped_chat_weekend['name'] / 2 if len(df_plot_weekend) > 0 else 0
+elif plot_type == 'Cumulative':
+    # Cumulative sum for 'name' column
+    grouped_chat_weekday['name'] = grouped_chat_weekday['name'].cumsum()
+    grouped_chat_weekend['name'] = grouped_chat_weekend['name'].cumsum()
+
 fig4 = go.Figure()
 
+# Adding traces for weekday and weekend lines
+fig4.add_trace(go.Scatter(y=grouped_chat_weekday['name'], x=grouped_chat_weekday[option],
+                          mode='lines', name='weekday lines'))
+fig4.add_trace(go.Scatter(y=grouped_chat_weekend['name'], x=grouped_chat_weekend[option],
+                          mode='lines', name='weekend lines'))
 
-fig4.add_trace(go.Scatter(y=grouped_chat_weekday['name'].values, x=grouped_chat_weekday[option].values
-                              , mode='lines', name='weekday lines'))
-fig4.add_trace(go.Scatter(y=grouped_chat_weekend['name'].values, x=grouped_chat_weekend[option].values
-                              , mode='lines', name='weekend lines'))
 fig4.update_xaxes(rangeslider_visible=True)
 fig4.update_layout(template='plotly_white')
 st.plotly_chart(fig4)
@@ -417,7 +455,7 @@ if day_type  == 'Weekday':
 else:
      chat_day_plot = chat_day[chat_day['is_weekday'] == 0]
 count= st.slider('top chat in a day count:', min_value=0, max_value=100, step=1, value=20)
-fig7 = px.bar(chat_day_plot['chat in a day'][:count],title='Chat in a day', text_auto='s')
+fig7 = px.bar(chat_day_plot['chat in a day'][:count],title='Chat in a day', text_auto='s', text=chat_day_plot['chat in a day'][:count])
 fig7.update_traces(marker_color='#ff6961')
 fig7.update_layout(template = 'plotly_white')
 st.plotly_chart(fig7)
@@ -456,15 +494,17 @@ fig11.update_traces(marker_color='#ff6961')
 st.plotly_chart(fig11)
 
 # Heatmap of message activity
-st.header("Message Activity Heatmap")
-df["hour"] = df["datetime"].dt.hour
-df["day"] = df["datetime"].dt.day_name()
-heatmap_data = df.groupby(["day", "hour"]).size().reset_index(name="count")
-heatmap_data = heatmap_data.pivot(index="day", columns="hour", values="count")
-fig12 = px.imshow(heatmap_data, title="Message Activity Heatmap")
-fig12.update_layout(template="plotly_white")
-st.plotly_chart(fig12)
-
+for name in df["name"].unique():
+    if type(name) == float:
+        break
+    st.header(f"Message Activity Heatmap for {name}")
+    df["hour"] = df["datetime"].dt.hour
+    df["day"] = df["datetime"].dt.day_name()
+    heatmap_data = df[df['name']==name].groupby(["day", "hour"]).size().reset_index(name="count")
+    heatmap_data = heatmap_data.pivot(index="day", columns="hour", values="count")
+    fig12 = px.imshow(heatmap_data, title="Message Activity Heatmap")
+    fig12.update_layout(template="plotly_white")
+    st.plotly_chart(fig12)
 
 
 try:

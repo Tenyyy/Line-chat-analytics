@@ -1,7 +1,6 @@
 pillow
-streamlit
+streamlit==1.9.0
 plotly
-pillow
 numpy
 pandas
 wordcloud
