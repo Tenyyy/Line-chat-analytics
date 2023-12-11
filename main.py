@@ -180,6 +180,21 @@ def create_datetime(df):
     df['time'] = df['time'].astype('str')
     return df
 
+def convert_by_to_cy(df):
+    """change Buddhist year to Christian year and change the column type to be pd.datetime"""
+    df = df[(df.date.str.len() == 10)]
+    date_list = df['date'].str.split('/', n=2, expand=True)
+    df['day'] = date_list[0]
+    df['month'] = date_list[1]
+    df['year'] = date_list[2]
+    df['year'] = df['year'].astype('int')
+    df['year'] = df['year'] - 543
+    df['year'] = df['year'].astype('str')
+    df['datetime'] = df['day'] + '/' + df['month'] + '/' + df['year']
+    df['datetime'] = pd.to_datetime(df['datetime'], errors='coerce')
+    df['hour'] = df['datetime'].dt.hour
+    return df
+
 @st.cache
 def count_word(df):
     """count number of unique words"""
@@ -312,6 +327,7 @@ try:
     call_time['call second'] = call_time['call time'].apply(lambda x: fix_call(x))
     call_time = call_time.sort_values(by='call second', ascending=False)
     call_time.reset_index(inplace=True)
+
 except: # for chat that never call
     pass
 
@@ -467,15 +483,60 @@ fig8 = go.Figure(
     data=[go.Pie(labels=pie_chart.index, values=pie_chart['chat'], hole=0.4, textinfo='label+percent', insidetextorientation='radial')])
 st.plotly_chart(fig8)
 
+chat_day = convert_by_to_cy(chat_day)
+
+chat_day['date'] = pd.to_datetime(chat_day['datetime'], format='%Y-%m-%d')
+st.header('Chat in a day')
+chat_day = chat_day.sort_values(by='date')
+fig14 = px.bar(chat_day, x='date', y='chat in a day', text='chat in a day')
+st.write(fig14)
+
+st.header('Cumulative chat in a day')
+chat_day['cum chat in a day'] = chat_day['chat in a day'].cumsum()
+
+
+fig15 = px.bar(chat_day, x='date', y='cum chat in a day', text='cum chat in a day')
+st.write(fig15)
+
+
+st.header('Top chat in a day count')
+fig13 = px.bar(df.groupby('dow').agg({"chat":"count"}).sort_values(by='chat', ascending=False).reset_index().head(10), x='dow', y='chat', text='chat')
+st.plotly_chart(fig13)
+
 try:
+    st.write(call_time)
     st.header('Top call time (second)')
     count= st.slider('top count call time:', min_value=0, max_value=100, step=1, value=20)
-    fig9 = px.bar(call_time['call second'][:count],title='Count call time', text_auto='s')
+    fig9 = px.bar(y=call_time['call second'][:count], x=call_time['date'][:count],title='Count call time', text_auto='s')
     fig9.update_traces(marker_color='#ff6961')
     fig9.update_layout(template = 'plotly_white')
     st.plotly_chart(fig9)
+
+    call_time = convert_by_to_cy(call_time)
+    call_time['date'] = pd.to_datetime(call_time['datetime'], format='%Y-%m-%d')
+    call_time = call_time.sort_values(by='date')
+    st.header('Call time (second)')
+    fig16 = px.bar(call_time, x='date', y='call second', text='call second')
+    st.write(fig16)
+    st.header('Cumulative call time (second)')
+
+    call_time['call second'] = call_time['call second'].astype('int64')
+    call_time_agg = call_time.groupby('datetime')['call second'].sum().reset_index()
+
+    call_time_agg['cum call second'] = call_time_agg['call second'].cumsum()
+    fig17 = px.bar(call_time_agg, x='datetime', y='cum call second', text='cum call second')
+    st.write(fig17) 
+    
+    # call time วันที่ไม่ตรงกันกับวันที่คอล
+    st.header('who initiate call')
+    fig18 = px.histogram(call_time, x='name')
+    st.write(fig18)
+  
 except:
     pass
+
+
+
 
 # Distribution of chat messages per user
 st.header("Number of Messages per User")
