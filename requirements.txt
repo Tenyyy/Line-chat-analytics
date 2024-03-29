@@ -11,3 +11,4 @@ pythainlp
 textblob
 spacy
 langdetect
+keras-preprocessing
