@@ -11,5 +11,3 @@ pythainlp
 textblob
 spacy
 langdetect
-keras-preprocessing
-keras==2.6.0
