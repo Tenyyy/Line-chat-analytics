@@ -12,4 +12,4 @@ textblob
 spacy
 langdetect
 keras-preprocessing
-keras
+keras==2.6.0
