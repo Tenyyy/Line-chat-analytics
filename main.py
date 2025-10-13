@@ -21,15 +21,15 @@ from pythainlp import word_tokenize
 from pythainlp.corpus import thai_stopwords
 from sklearn.preprocessing import LabelEncoder
 from collections import Counter
-from tensorflow.keras.preprocessing.text import Tokenizer
+# from tensorflow.keras.preprocessing.text import Tokenizer
 from sklearn.model_selection import train_test_split
-from tensorflow.keras.preprocessing.sequence import pad_sequences
-from keras.models import Sequential
-from keras.layers import Dense
-from keras.layers import LSTM
-from keras.layers import Embedding
-from keras.layers import SpatialDropout1D
-from keras.layers import Embedding
+# from tensorflow.keras.preprocessing.sequence import pad_sequences
+# from keras.models import Sequential
+# from keras.layers import Dense
+# from keras.layers import LSTM
+# from keras.layers import Embedding
+# from keras.layers import SpatialDropout1D
+# from keras.layers import Embedding
 import plotly.graph_objects as go
 # import download_spacy_models
 
@@ -55,39 +55,39 @@ def who_write(array):
     return name[max_index]
 
 
-def load_tokenizer_and_model(MAX_WORDS):
-    filename = 'model.sav'
-    with open(filename, 'rb') as file:
-        loaded_model = pickle.load(file)
+# def load_tokenizer_and_model(MAX_WORDS):
+#     filename = 'model.sav'
+#     with open(filename, 'rb') as file:
+#         loaded_model = pickle.load(file)
 
-    # Load the PyThaiNLP tokenizer's word_index from a JSON file
-    with open('word_index.json', 'r', encoding='utf-8') as f:
-        word_index = json.load(f)
+#     # Load the PyThaiNLP tokenizer's word_index from a JSON file
+#     with open('word_index.json', 'r', encoding='utf-8') as f:
+#         word_index = json.load(f)
 
-    # Create a Keras tokenizer with the PyThaiNLP tokenizer's word_index
-    tokenizer = Tokenizer(num_words=MAX_WORDS, filters='!"#$%&()*+,-./:;<=>?@[\]^_`{|}~')
-    tokenizer.word_index = word_index
+#     # Create a Keras tokenizer with the PyThaiNLP tokenizer's word_index
+#     tokenizer = Tokenizer(num_words=MAX_WORDS, filters='!"#$%&()*+,-./:;<=>?@[\]^_`{|}~')
+#     tokenizer.word_index = word_index
 
-    return tokenizer, loaded_model
+#     return tokenizer, loaded_model
 
 
-def get_predict(X_test):
-    """load and predict value of the text classification"""
-    if X_test == '...':
-        return '...'
-    else:
-        MAX_WORDS = 2500
-        MAX_SEQUENCE_LENGTH = 10
-        tokenizer, loaded_model = load_tokenizer_and_model(MAX_WORDS)
+# def get_predict(X_test):
+#     """load and predict value of the text classification"""
+#     if X_test == '...':
+#         return '...'
+#     else:
+#         MAX_WORDS = 2500
+#         MAX_SEQUENCE_LENGTH = 10
+#         tokenizer, loaded_model = load_tokenizer_and_model(MAX_WORDS)
 
-        # Use the custom tokenize_thai function
-        X_test = [' '.join(tokenize_thai(X_test))]
+#         # Use the custom tokenize_thai function
+#         X_test = [' '.join(tokenize_thai(X_test))]
         
-        X_test=tokenizer.texts_to_sequences(X_test)
-        X_test=pad_sequences(X_test, maxlen=MAX_SEQUENCE_LENGTH)
-        result = loaded_model.predict(X_test)
-        who = who_write(result)
-    return who
+#         X_test=tokenizer.texts_to_sequences(X_test)
+#         X_test=pad_sequences(X_test, maxlen=MAX_SEQUENCE_LENGTH)
+#         result = loaded_model.predict(X_test)
+#         who = who_write(result)
+#     return who
 
 def fix_call(x):
     """create a call time feature in second unit"""
@@ -622,53 +622,52 @@ st.image(image, caption='Wordcloud of top messages')
 
 
 
-
 #train model
-st.header('Train LSTM model to predict word')
-if st.button('Train model'):
-    train_model_state = st.text('Training model...')
-    MAX_WORDS = 2500
-    MAX_SEQUENCE_LENGTH = 10
-    EMBEDDING_DIM = 100
+# st.header('Train LSTM model to predict word')
+# if st.button('Train model'):
+#     train_model_state = st.text('Training model...')
+#     MAX_WORDS = 2500
+#     MAX_SEQUENCE_LENGTH = 10
+#     EMBEDDING_DIM = 100
 
-    tokenizer = Tokenizer(num_words=MAX_WORDS, filters='!"#$%&()*+,-./:;<=>?@[\]^_`{|}~')
-    texts = [' '.join(tokenize_thai(text)) for text in df.chat.values]
-    tokenizer.fit_on_texts(texts)
-    word_index = tokenizer.word_index
-    X = tokenizer.texts_to_sequences(texts)
+#     tokenizer = Tokenizer(num_words=MAX_WORDS, filters='!"#$%&()*+,-./:;<=>?@[\]^_`{|}~')
+#     texts = [' '.join(tokenize_thai(text)) for text in df.chat.values]
+#     tokenizer.fit_on_texts(texts)
+#     word_index = tokenizer.word_index
+#     X = tokenizer.texts_to_sequences(texts)
 
-    X = pad_sequences(X, maxlen=MAX_SEQUENCE_LENGTH)
-    Y = pd.get_dummies(df['name']).values
-    X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.10, random_state=42)
+#     X = pad_sequences(X, maxlen=MAX_SEQUENCE_LENGTH)
+#     Y = pd.get_dummies(df['name']).values
+#     X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.10, random_state=42)
 
-    model = Sequential()
-    model.add(Embedding(MAX_WORDS, EMBEDDING_DIM, input_length=X_train.shape[1]))
-    model.add(SpatialDropout1D(0.2))
-    model.add(LSTM(100, dropout=0.2, recurrent_dropout=0.2))
-    model.add(Dense(2, activation='softmax'))
-    model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+#     model = Sequential()
+#     model.add(Embedding(MAX_WORDS, EMBEDDING_DIM, input_length=X_train.shape[1]))
+#     model.add(SpatialDropout1D(0.2))
+#     model.add(LSTM(100, dropout=0.2, recurrent_dropout=0.2))
+#     model.add(Dense(2, activation='softmax'))
+#     model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
 
-    epochs = 5
-    batch_size = 64
+#     epochs = 5
+#     batch_size = 64
 
-    history = model.fit(X_train, Y_train, epochs=epochs, batch_size=batch_size, validation_split=0.1)
-    train_model_state.text('Training model... done!')
-    accr = model.evaluate(X_test, Y_test)
-    st.write('Test set\n  Loss: {:0.3f}\n  Accuracy: {:0.3f}'.format(accr[0], accr[1]))
+#     history = model.fit(X_train, Y_train, epochs=epochs, batch_size=batch_size, validation_split=0.1)
+#     train_model_state.text('Training model... done!')
+#     accr = model.evaluate(X_test, Y_test)
+#     st.write('Test set\n  Loss: {:0.3f}\n  Accuracy: {:0.3f}'.format(accr[0], accr[1]))
 
-    # Save the PyThaiNLP tokenizer's word_index to a JSON file
-    with open('word_index.json', 'w', encoding='utf-8') as f:
-        json.dump(tokenizer.word_index, f, ensure_ascii=False, indent=4)
+#     # Save the PyThaiNLP tokenizer's word_index to a JSON file
+#     with open('word_index.json', 'w', encoding='utf-8') as f:
+#         json.dump(tokenizer.word_index, f, ensure_ascii=False, indent=4)
 
-    # save the model to disk
-    filename = 'model.sav'
-    pickle.dump(model, open(filename, 'wb'))
-    st.write('model saved!!')
-else:
-    pass
+#     # save the model to disk
+#     filename = 'model.sav'
+#     pickle.dump(model, open(filename, 'wb'))
+#     st.write('model saved!!')
+# else:
+#     pass
 
 text = st.text_input('Any words', '...')
 
 
-predicted = get_predict(str(text))
-st.write(f"Predicted writer: {predicted}")
+# predicted = get_predict(str(text))
+# st.write(f"Predicted writer: {predicted}")

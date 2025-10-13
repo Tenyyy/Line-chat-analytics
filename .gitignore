@@ -1,0 +1,56 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+
+# Flask
+instance/
+.webassets-cache
+
+# Logs
+*.log
+
+# Chat data files (user uploads - keep test.txt for demo)
+uploads/
+*.txt
+!test.txt
+
+# Model files
+model.sav
+*.pkl
+*.h5
+
+# Generated images  
+wordcloud.png
+*.png
+!assets/*.png
+!assets/*.gif
+
+# User data
+word_index.json
+
+# Development containers
+.devcontainer/

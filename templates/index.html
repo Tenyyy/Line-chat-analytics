@@ -1,0 +1,1189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LINE Chat Analytics</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #00d084;
+            --secondary-color: #06c755;
+            --dark-color: #2c3e50;
+            --light-gray: #f8f9fa;
+            --border-color: #e9ecef;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            font-family: 'Segoe UI', Tango, Geneva, Verdana, sans-serif;
+        }
+        
+        .navbar {
+            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .main-header {
+            text-align: center;
+            padding: 3rem 0 2rem 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            margin-bottom: 2rem;
+            border-radius: 0 0 50px 50px;
+        }
+        
+        .main-header h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .main-header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        
+        .upload-area {
+            border: 3px dashed #ddd;
+            border-radius: 20px;
+            padding: 3rem;
+            text-align: center;
+            margin: 2rem 0;
+            transition: all 0.3s ease;
+            background: white;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        }
+        
+        .upload-area:hover {
+            border-color: var(--primary-color);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+        
+        .upload-area.dragover {
+            border-color: var(--secondary-color);
+            background: linear-gradient(45deg, #f8fff9, #e8f5e8);
+            transform: scale(1.02);
+        }
+        
+        .upload-icon {
+            font-size: 4rem;
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+        }
+        
+        .stats-card {
+            margin: 15px 0;
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            background: white;
+        }
+        
+        .stats-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+        
+        .stats-card .card-body {
+            padding: 2rem;
+            text-align: center;
+        }
+        
+        .stats-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .chart-container {
+            margin: 2rem 0;
+            padding: 2rem;
+            border: none;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            background: white;
+            transition: all 0.3s ease;
+        }
+        
+        .chart-container:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 2rem 0;
+        }
+        
+        .loading .spinner-border {
+            width: 3rem;
+            height: 3rem;
+            border-width: 4px;
+        }
+        
+        .wordcloud-container {
+            text-align: center;
+            margin: 2rem 0;
+            padding: 2rem;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .btn-custom {
+            border-radius: 25px;
+            padding: 12px 30px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            border: none;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .btn-primary.btn-custom {
+            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+        }
+        
+        .btn-primary.btn-custom:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+        
+        .section-header {
+            text-align: center;
+            margin: 3rem 0 2rem 0;
+            position: relative;
+        }
+        
+        .section-header h2 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--dark-color);
+            margin-bottom: 1rem;
+        }
+        
+        .section-header::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 4px;
+            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+            border-radius: 2px;
+        }
+        
+        .fun-facts {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 20px;
+            color: white;
+            padding: 2rem;
+            margin: 2rem 0;
+        }
+        
+        .fun-facts .metric-card {
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .metric-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #fff;
+        }
+        
+        .metric-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .user-stats-row {
+            background: white;
+            border-radius: 10px;
+            padding: 1rem;
+            margin: 0.5rem 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+        }
+        
+        .user-stats-row:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .progress-custom {
+            height: 10px;
+            border-radius: 5px;
+            background: #f0f0f0;
+        }
+        
+        .progress-custom .progress-bar {
+            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+            border-radius: 5px;
+        }
+        
+        .alert-custom {
+            border: none;
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.8s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-header">
+        <div class="container">
+            <h1><i class="fab fa-line"></i> LINE Chat Analytics</h1>
+            <p class="lead">Discover insights from your conversations with beautiful visualizations and comprehensive statistics</p>
+        </div>
+    </div>
+
+    <div class="container")
+
+        <!-- File Upload Section -->
+        <div class="row">
+            <div class="col-12">
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                    </div>
+                    <h3 class="mb-3">Drop your LINE chat file here</h3>
+                    <p class="mb-4 text-muted">Or click the button below to select a .txt file from your device</p>
+                    <input type="file" id="fileInput" accept=".txt" style="display: none;">
+                    <button class="btn btn-primary btn-custom" id="chooseFileBtn">
+                        <i class="fas fa-file-upload me-2"></i>Choose Chat File
+                    </button>
+                    <div class="mt-3">
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Supported format: LINE chat export (.txt files)
+                        </small>
+                    </div>
+                </div>
+                <div class="loading" id="loading">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <h4 class="mt-3">Processing your chat file...</h4>
+                    <p class="text-muted">This may take a moment depending on file size</p>
+                </div>
+                <div id="uploadStatus"></div>
+            </div>
+        </div>
+
+        <!-- Stats Section -->
+        <div id="statsSection" style="display: none;" class="fade-in">
+            <div class="section-header">
+                <h2><i class="fas fa-chart-bar me-3"></i>Chat Overview</h2>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="card stats-card">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="me-3">
+                                    <i class="fas fa-comments fa-2x text-primary"></i>
+                                </div>
+                                <div>
+                                    <h6 class="card-title mb-1">Total Messages</h6>
+                                    <div class="stats-number" id="totalMessages">-</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card stats-card">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="me-3">
+                                    <i class="fas fa-users fa-2x text-success"></i>
+                                </div>
+                                <div>
+                                    <h6 class="card-title mb-1">Participants</h6>
+                                    <div class="stats-number text-success" id="totalParticipants">-</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card stats-card">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="me-3">
+                                    <i class="fas fa-images fa-2x text-warning"></i>
+                                </div>
+                                <div>
+                                    <h6 class="card-title mb-1">Photos</h6>
+                                    <div class="stats-number text-warning" id="totalPhotos">-</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card stats-card">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="me-3">
+                                    <i class="fas fa-laugh fa-2x text-info"></i>
+                                </div>
+                                <div>
+                                    <h6 class="card-title mb-1">Stickers</h6>
+                                    <div class="stats-number text-info" id="totalStickers">-</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mt-3">
+                <div class="col-12">
+                    <div class="card stats-card">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="me-3">
+                                    <i class="fas fa-calendar-alt fa-2x text-secondary"></i>
+                                </div>
+                                <div>
+                                    <h6 class="card-title mb-1">Chat Duration</h6>
+                                    <p class="card-text mb-0" id="dateRange">-</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- User Stats -->
+        <div id="userStatsSection" style="display: none;" class="fade-in">
+            <div class="section-header">
+                <h2><i class="fas fa-user-friends me-3"></i>Participant Analysis</h2>
+            </div>
+            <div class="chart-container">
+                <div id="userStats"></div>
+            </div>
+        </div>
+        
+        <!-- Fun Facts Section -->
+        <div id="funFactsSection" style="display: none;" class="fade-in">
+            <div class="section-header">
+                <h2><i class="fas fa-star me-3"></i>Fun Facts</h2>
+            </div>
+            <div class="fun-facts">
+                <div class="row" id="funFactsContent">
+                    <!-- Fun facts will be populated here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Visualizations Section -->
+        <div id="visualizationsSection" style="display: none;" class="fade-in">
+            <div class="section-header">
+                <h2><i class="fas fa-chart-line me-3"></i>Interactive Analytics</h2>
+            </div>
+            
+            <div class="row">
+                <div class="col-lg-6 mb-4">
+                    <div class="chart-container">
+                        <h4 class="mb-3"><i class="fas fa-trophy me-2 text-warning"></i>Most Popular Messages</h4>
+                        <div id="topMessagesChart"></div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-6 mb-4">
+                    <div class="chart-container">
+                        <h4 class="mb-3"><i class="fas fa-user-chart me-2 text-primary"></i>Messages by Participant</h4>
+                        <div id="messagesPerUserChart"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-lg-6 mb-4">
+                    <div class="chart-container">
+                        <h4 class="mb-3"><i class="fas fa-clock me-2 text-info"></i>Activity by Hour</h4>
+                        <div id="messagesByHourChart"></div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-6 mb-4">
+                    <div class="chart-container">
+                        <h4 class="mb-3"><i class="fas fa-calendar-week me-2 text-success"></i>Activity by Day of Week</h4>
+                        <div id="messagesByDowChart"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-12 mb-4">
+                    <div class="chart-container">
+                        <h4 class="mb-3"><i class="fas fa-file-alt me-2 text-secondary"></i>Message Types Distribution</h4>
+                        <div id="chatTypesChart"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-lg-6 mb-4">
+                    <div class="chart-container">
+                        <h4 class="mb-3"><i class="fas fa-chart-area me-2 text-purple"></i>Messages Over Time</h4>
+                        <div id="messagesOverTimeChart"></div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-6 mb-4">
+                    <div class="chart-container">
+                        <h4 class="mb-3"><i class="fas fa-fire me-2 text-danger"></i>Activity Heatmap</h4>
+                        <div id="activityHeatmapChart"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Word Prediction Section -->
+        <div id="predictionSection" style="display: none;" class="fade-in">
+            <div class="section-header">
+                <h2><i class="fas fa-brain me-3"></i>Who Wrote This?</h2>
+            </div>
+            
+            <div class="row">
+                <div class="col-lg-8 mx-auto">
+                    <div class="chart-container">
+                        <h4 class="mb-3"><i class="fas fa-robot me-2 text-primary"></i>Text Author Prediction</h4>
+                        <p class="text-muted mb-4">Enter some text and see who is most likely to have written it based on chat patterns</p>
+                        
+                        <div class="mb-4">
+                            <div class="input-group input-group-lg">
+                                <textarea 
+                                    class="form-control" 
+                                    id="predictionInput" 
+                                    placeholder="Type a message here to predict who would write it..."
+                                    rows="3"
+                                    style="resize: none; border-radius: 15px 0 0 15px;"
+                                ></textarea>
+                                <button 
+                                    class="btn btn-primary btn-custom" 
+                                    type="button" 
+                                    id="predictBtn"
+                                    style="border-radius: 0 15px 15px 0;"
+                                >
+                                    <i class="fas fa-magic me-2"></i>Predict
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div id="predictionResult" style="display: none;">
+                            <div class="alert alert-info alert-custom">
+                                <h5 class="mb-3"><i class="fas fa-chart-pie me-2"></i>Prediction Results</h5>
+                                <div id="predictionContent"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Advanced Statistics Section -->
+        <div id="advancedStatsSection" style="display: none;" class="fade-in">
+            <div class="section-header">
+                <h2><i class="fas fa-microscope me-3"></i>Advanced Insights</h2>
+            </div>
+            
+            <div class="row">
+                <!-- Message Length Analysis -->
+                <div class="col-lg-6 mb-4">
+                    <div class="chart-container">
+                        <h4 class="mb-3"><i class="fas fa-ruler-horizontal me-2 text-info"></i>Message Length Analysis</h4>
+                        <div id="messageLengthStats"></div>
+                    </div>
+                </div>
+                
+                <!-- Response Patterns -->
+                <div class="col-lg-6 mb-4">
+                    <div class="chart-container">
+                        <h4 class="mb-3"><i class="fas fa-clock me-2 text-warning"></i>Response Patterns</h4>
+                        <div id="responsePatternStats"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <!-- Conversation Starters -->
+                <div class="col-lg-6 mb-4">
+                    <div class="chart-container">
+                        <h4 class="mb-3"><i class="fas fa-comments me-2 text-success"></i>Conversation Starters</h4>
+                        <div id="conversationStarterStats"></div>
+                    </div>
+                </div>
+                
+                <!-- Emoji Usage -->
+                <div class="col-lg-6 mb-4">
+                    <div class="chart-container">
+                        <h4 class="mb-3"><i class="fas fa-smile me-2 text-primary"></i>Emoji Champions</h4>
+                        <div id="emojiUsageStats"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Wordcloud Section -->
+        <div id="wordcloudSection" style="display: none;" class="fade-in">
+            <div class="section-header">
+                <h2><i class="fas fa-cloud me-3"></i>Word Analysis</h2>
+            </div>
+            
+            <div class="row">
+                <div class="col-lg-8">
+                    <div class="wordcloud-container">
+                        <h4 class="mb-3"><i class="fas fa-cloud-word me-2"></i>Word Cloud</h4>
+                        <p class="text-muted mb-4">Visual representation of most frequently used words</p>
+                        <img id="wordcloudImg" style="max-width: 100%; height: auto; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);" />
+                    </div>
+                </div>
+                
+                <div class="col-lg-4">
+                    <div class="chart-container">
+                        <h4 class="mb-3"><i class="fas fa-list-ol me-2 text-primary"></i>Top Words</h4>
+                        <div id="topWordsContainer">
+                            <p class="text-muted">Most frequently used words will appear here...</p>
+                        </div>
+                        <div class="mt-3">
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle me-1"></i>
+                                <span id="wordStats">Word statistics will appear here</span>
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="row mt-5">
+            <div class="col-12 text-center">
+                <p class="text-muted">
+                    <small>
+                        Privacy Notice: All analysis is performed locally. Your chat data is not stored on any server.
+                    </small>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // File upload handling
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const chooseFileBtn = document.getElementById('chooseFileBtn');
+        const loading = document.getElementById('loading');
+        const uploadStatus = document.getElementById('uploadStatus');
+        
+        let isProcessing = false;
+
+        // Drag and drop handlers
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0 && !isProcessing) {
+                handleFile(files[0]);
+            }
+        });
+
+        // Separate click handler for the button
+        chooseFileBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (!isProcessing) {
+                fileInput.click();
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            console.log('File input change event triggered');
+            if (e.target.files.length > 0 && !isProcessing) {
+                handleFile(e.target.files[0]);
+            }
+            // Clear the input to allow selecting the same file again if needed
+            e.target.value = '';
+        });
+
+        async function handleFile(file) {
+            if (isProcessing) {
+                console.log('Already processing a file, ignoring...');
+                return;
+            }
+            
+            isProcessing = true;
+            console.log('Handling file:', file.name, file.size);
+            
+            if (!file.name.endsWith('.txt')) {
+                showStatus('error', 'Please select a .txt file');
+                isProcessing = false;
+                return;
+            }
+
+            loading.style.display = 'block';
+            uploadStatus.innerHTML = '';
+            chooseFileBtn.disabled = true;
+            chooseFileBtn.textContent = 'Processing...';
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                console.log('Sending upload request...');
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                console.log('Response status:', response.status);
+                
+                // Handle different response types
+                let result;
+                try {
+                    result = await response.json();
+                } catch (parseError) {
+                    // If we can't parse JSON, it might be an HTML error page (like 413)
+                    if (response.status === 413) {
+                        showStatus('error', 'File too large! Maximum size allowed is 100MB. Please try with a smaller file.');
+                        return;
+                    }
+                    throw new Error(`Server error (${response.status}): Unable to parse response`);
+                }
+                
+                console.log('Upload result:', result);
+                
+                if (result.success) {
+                    showStatus('success', result.message);
+                    await loadAnalysis();
+                } else {
+                    showStatus('error', result.message);
+                }
+            } catch (error) {
+                console.error('Upload error:', error);
+                if (error.message.includes('413') || error.message.includes('too large')) {
+                    showStatus('error', 'File too large! Maximum size allowed is 100MB. Please try with a smaller file.');
+                } else {
+                    showStatus('error', 'Upload failed: ' + error.message);
+                }
+            }
+
+            loading.style.display = 'none';
+            chooseFileBtn.disabled = false;
+            chooseFileBtn.textContent = 'Choose File';
+            isProcessing = false;
+        }
+
+        function showStatus(type, message) {
+            const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+            const icon = type === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-triangle';
+            uploadStatus.innerHTML = `
+                <div class="alert ${alertClass} alert-custom mt-3 fade-in">
+                    <i class="${icon} me-2"></i>${message}
+                </div>
+            `;
+        }
+
+        async function loadAnalysis() {
+            try {
+                // Load stats
+                const statsResponse = await fetch('/stats');
+                const stats = await statsResponse.json();
+                displayStats(stats);
+
+                // Load visualizations
+                const vizResponse = await fetch('/visualizations');
+                const visualizations = await vizResponse.json();
+                displayVisualizations(visualizations);
+
+                // Load wordcloud
+                const wordcloudResponse = await fetch('/wordcloud');
+                const wordcloudData = await wordcloudResponse.json();
+                displayWordcloud(wordcloudData);
+
+                // Load word frequencies
+                const wordFreqResponse = await fetch('/word_frequency');
+                const wordFreqData = await wordFreqResponse.json();
+                displayWordFrequencies(wordFreqData);
+
+                // Load advanced statistics
+                const advancedStatsResponse = await fetch('/advanced_stats');
+                const advancedStatsData = await advancedStatsResponse.json();
+                displayAdvancedStats(advancedStatsData);
+
+            } catch (error) {
+                console.error('Error loading analysis:', error);
+                showStatus('error', 'Failed to load analysis results');
+            }
+        }
+
+        function displayStats(stats) {
+            // Basic stats
+            document.getElementById('totalMessages').textContent = formatNumber(stats.total_messages || 0);
+            document.getElementById('totalParticipants').textContent = stats.participants || 0;
+            document.getElementById('dateRange').textContent = stats.date_range || 'Unknown';
+            
+            // Chat type stats
+            document.getElementById('totalPhotos').textContent = formatNumber(stats.chat_type_counts?.['[Photo]'] || 0);
+            document.getElementById('totalStickers').textContent = formatNumber(stats.chat_type_counts?.['[Sticker]'] || 0);
+
+            // Display enhanced user stats
+            const userStatsDiv = document.getElementById('userStats');
+            let userStatsHTML = '<h5 class="mb-4">Message Distribution by Participant</h5>';
+            
+            if (stats.user_message_counts) {
+                for (const [user, count] of Object.entries(stats.user_message_counts)) {
+                    const percentage = ((count / stats.total_messages) * 100).toFixed(1);
+                    userStatsHTML += `
+                        <div class="user-stats-row">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-user-circle fa-2x text-primary me-3"></i>
+                                    <div>
+                                        <strong>${user}</strong>
+                                        <small class="text-muted d-block">${formatNumber(count)} messages</small>
+                                    </div>
+                                </div>
+                                <span class="badge bg-primary rounded-pill">${percentage}%</span>
+                            </div>
+                            <div class="progress progress-custom">
+                                <div class="progress-bar" style="width: ${percentage}%"></div>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+            userStatsDiv.innerHTML = userStatsHTML;
+
+            // Display fun facts
+            displayFunFacts(stats);
+
+            // Show stats sections with animation
+            setTimeout(() => {
+                document.getElementById('statsSection').style.display = 'block';
+                document.getElementById('userStatsSection').style.display = 'block';
+                document.getElementById('funFactsSection').style.display = 'block';
+            }, 300);
+        }
+        
+        function displayFunFacts(stats) {
+            const funFactsDiv = document.getElementById('funFactsContent');
+            let funFactsHTML = '';
+            
+            if (stats.chat_type_counts) {
+                const facts = [
+                    { icon: 'fas fa-images', label: 'Photos Shared', value: formatNumber(stats.chat_type_counts['[Photo]'] || 0), color: 'warning' },
+                    { icon: 'fas fa-laugh', label: 'Stickers Sent', value: formatNumber(stats.chat_type_counts['[Sticker]'] || 0), color: 'info' },
+                    { icon: 'fas fa-video', label: 'Videos Shared', value: formatNumber(stats.chat_type_counts['[Video]'] || 0), color: 'danger' },
+                    { icon: 'fas fa-phone-slash', label: 'Missed Calls', value: formatNumber(stats.chat_type_counts['☎ Missed call'] || 0), color: 'secondary' },
+                    { icon: 'fas fa-file', label: 'Files Shared', value: formatNumber(stats.chat_type_counts['[File]'] || 0), color: 'success' },
+                    { icon: 'fas fa-microphone', label: 'Voice Messages', value: formatNumber(stats.chat_type_counts['[Voice message]'] || 0), color: 'primary' }
+                ];
+                
+                facts.forEach(fact => {
+                    if (parseInt(fact.value) > 0) {
+                        funFactsHTML += `
+                            <div class="col-md-4 col-sm-6">
+                                <div class="metric-card">
+                                    <div class="d-flex align-items-center">
+                                        <i class="${fact.icon} fa-2x me-3"></i>
+                                        <div>
+                                            <div class="metric-value">${fact.value}</div>
+                                            <div class="metric-label">${fact.label}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                });
+            }
+            
+            funFactsDiv.innerHTML = funFactsHTML;
+        }
+        
+        function formatNumber(num) {
+            if (num >= 1000000) {
+                return (num / 1000000).toFixed(1) + 'M';
+            } else if (num >= 1000) {
+                return (num / 1000).toFixed(1) + 'K';
+            }
+            return num.toString();
+        }
+
+        function displayVisualizations(viz) {
+            const plotConfig = {
+                responsive: true,
+                displayModeBar: false,
+                showTips: false
+            };
+            
+            if (viz.top_messages) {
+                const plotData = JSON.parse(viz.top_messages);
+                Plotly.newPlot('topMessagesChart', plotData.data, {
+                    ...plotData.layout,
+                    paper_bgcolor: 'rgba(0,0,0,0)',
+                    plot_bgcolor: 'rgba(0,0,0,0)',
+                    font: { family: 'Segoe UI, sans-serif', size: 12 }
+                }, plotConfig);
+            }
+            
+            if (viz.messages_per_user) {
+                const plotData = JSON.parse(viz.messages_per_user);
+                Plotly.newPlot('messagesPerUserChart', plotData.data, {
+                    ...plotData.layout,
+                    paper_bgcolor: 'rgba(0,0,0,0)',
+                    plot_bgcolor: 'rgba(0,0,0,0)',
+                    font: { family: 'Segoe UI, sans-serif', size: 12 }
+                }, plotConfig);
+            }
+            
+            if (viz.messages_by_hour) {
+                const plotData = JSON.parse(viz.messages_by_hour);
+                Plotly.newPlot('messagesByHourChart', plotData.data, {
+                    ...plotData.layout,
+                    paper_bgcolor: 'rgba(0,0,0,0)',
+                    plot_bgcolor: 'rgba(0,0,0,0)',
+                    font: { family: 'Segoe UI, sans-serif', size: 12 }
+                }, plotConfig);
+            }
+            
+            if (viz.messages_by_dow) {
+                const plotData = JSON.parse(viz.messages_by_dow);
+                Plotly.newPlot('messagesByDowChart', plotData.data, {
+                    ...plotData.layout,
+                    paper_bgcolor: 'rgba(0,0,0,0)',
+                    plot_bgcolor: 'rgba(0,0,0,0)',
+                    font: { family: 'Segoe UI, sans-serif', size: 12 }
+                }, plotConfig);
+            }
+            
+            if (viz.chat_types) {
+                const plotData = JSON.parse(viz.chat_types);
+                Plotly.newPlot('chatTypesChart', plotData.data, {
+                    ...plotData.layout,
+                    paper_bgcolor: 'rgba(0,0,0,0)',
+                    plot_bgcolor: 'rgba(0,0,0,0)',
+                    font: { family: 'Segoe UI, sans-serif', size: 12 }
+                }, plotConfig);
+            }
+            
+            if (viz.messages_over_time) {
+                const plotData = JSON.parse(viz.messages_over_time);
+                Plotly.newPlot('messagesOverTimeChart', plotData.data, {
+                    ...plotData.layout,
+                    paper_bgcolor: 'rgba(0,0,0,0)',
+                    plot_bgcolor: 'rgba(0,0,0,0)',
+                    font: { family: 'Segoe UI, sans-serif', size: 12 }
+                }, plotConfig);
+            }
+            
+            if (viz.activity_heatmap) {
+                const plotData = JSON.parse(viz.activity_heatmap);
+                Plotly.newPlot('activityHeatmapChart', plotData.data, {
+                    ...plotData.layout,
+                    paper_bgcolor: 'rgba(0,0,0,0)',
+                    plot_bgcolor: 'rgba(0,0,0,0)',
+                    font: { family: 'Segoe UI, sans-serif', size: 12 }
+                }, plotConfig);
+            }
+
+            setTimeout(() => {
+                document.getElementById('visualizationsSection').style.display = 'block';
+                document.getElementById('predictionSection').style.display = 'block';
+                document.getElementById('advancedStatsSection').style.display = 'block';
+            }, 600);
+        }
+
+        function displayWordcloud(data) {
+            if (data.wordcloud) {
+                document.getElementById('wordcloudImg').src = 'data:image/png;base64,' + data.wordcloud;
+                setTimeout(() => {
+                    document.getElementById('wordcloudSection').style.display = 'block';
+                }, 900);
+            }
+        }
+        
+        function displayWordFrequencies(data) {
+            if (data.word_frequencies) {
+                const container = document.getElementById('topWordsContainer');
+                let html = '';
+                
+                const words = Object.entries(data.word_frequencies).slice(0, 15);
+                words.forEach(([word, count], index) => {
+                    const percentage = ((count / words[0][1]) * 100).toFixed(0);
+                    html += `
+                        <div class="d-flex justify-content-between align-items-center mb-2 p-2 rounded" style="background: #f8f9fa;">
+                            <div class="d-flex align-items-center">
+                                <span class="badge bg-secondary me-2">${index + 1}</span>
+                                <span class="fw-bold" style="font-size: 1.1em;">${word}</span>
+                            </div>
+                            <div class="text-end">
+                                <span class="text-primary fw-bold">${count}</span>
+                                <div class="progress mt-1" style="height: 4px; width: 60px;">
+                                    <div class="progress-bar" style="width: ${percentage}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                container.innerHTML = html;
+                
+                // Update word statistics
+                const statsText = `${data.total_unique_words} unique words, ${formatNumber(data.total_words)} total words`;
+                document.getElementById('wordStats').textContent = statsText;
+            }
+        }
+        
+        function displayAdvancedStats(data) {
+            // Message Length Stats
+            if (data.message_length) {
+                const lengthStats = data.message_length;
+                let lengthHTML = `
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="metric-card bg-light p-3 rounded">
+                                <div class="metric-value text-info">${lengthStats.average}</div>
+                                <div class="metric-label">Average Length</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="metric-card bg-light p-3 rounded">
+                                <div class="metric-value text-warning">${lengthStats.longest}</div>
+                                <div class="metric-label">Longest Message</div>
+                            </div>
+                        </div>
+                    </div>
+                    <h6 class="mt-3 mb-2">Average by User:</h6>
+                `;
+                
+                for (const [user, avgLength] of Object.entries(lengthStats.by_user)) {
+                    lengthHTML += `
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span>${user}</span>
+                            <span class="badge bg-primary">${avgLength} chars</span>
+                        </div>
+                    `;
+                }
+                document.getElementById('messageLengthStats').innerHTML = lengthHTML;
+            }
+            
+            // Response Patterns
+            if (data.response_patterns) {
+                const responseStats = data.response_patterns;
+                const responseHTML = `
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="metric-card bg-light p-3 rounded mb-3">
+                                <div class="metric-value text-warning">${responseStats.average_response_time_minutes}min</div>
+                                <div class="metric-label">Average Response Time</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <div class="text-center">
+                            <div class="fw-bold text-success">${responseStats.quick_responses_under_1min}</div>
+                            <small class="text-muted">Quick Responses (&lt;1min)</small>
+                        </div>
+                        <div class="text-center">
+                            <div class="fw-bold text-info">${responseStats.median_response_time_minutes}min</div>
+                            <small class="text-muted">Median Response</small>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('responsePatternStats').innerHTML = responseHTML;
+            }
+            
+            // Conversation Starters
+            if (data.conversation_starters) {
+                let starterHTML = '<p class="text-muted mb-3">Who initiates conversations most often:</p>';
+                const starters = Object.entries(data.conversation_starters)
+                    .sort(([,a], [,b]) => b - a)
+                    .slice(0, 5);
+                
+                starters.forEach(([user, count]) => {
+                    starterHTML += `
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-user-circle text-success me-2"></i>
+                                <span>${user}</span>
+                            </div>
+                            <span class="badge bg-success">${count} times</span>
+                        </div>
+                    `;
+                });
+                document.getElementById('conversationStarterStats').innerHTML = starterHTML;
+            }
+            
+            // Emoji Usage
+            if (data.emoji_usage) {
+                let emojiHTML = '';
+                for (const [user, emojis] of Object.entries(data.emoji_usage)) {
+                    if (Object.keys(emojis).length > 0) {
+                        emojiHTML += `<h6 class="mt-3 mb-2">${user}'s Top Emojis:</h6>`;
+                        const topEmojis = Object.entries(emojis).slice(0, 5);
+                        topEmojis.forEach(([emoji, count]) => {
+                            emojiHTML += `
+                                <span class="badge bg-light text-dark me-2 mb-1" style="font-size: 1em;">
+                                    ${emoji} <small>(${count})</small>
+                                </span>
+                            `;
+                        });
+                    }
+                }
+                document.getElementById('emojiUsageStats').innerHTML = emojiHTML || '<p class="text-muted">No emoji usage detected</p>';
+            }
+        }
+        
+        // Word Prediction Functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const predictBtn = document.getElementById('predictBtn');
+            const predictionInput = document.getElementById('predictionInput');
+            const predictionResult = document.getElementById('predictionResult');
+            const predictionContent = document.getElementById('predictionContent');
+            
+            if (predictBtn) {
+                predictBtn.addEventListener('click', async function() {
+                    const text = predictionInput.value.trim();
+                    
+                    if (!text) {
+                        alert('Please enter some text to predict');
+                        return;
+                    }
+                    
+                    try {
+                        predictBtn.disabled = true;
+                        predictBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Analyzing...';
+                        
+                        const response = await fetch('/predict_user', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({ text: text })
+                        });
+                        
+                        const result = await response.json();
+                        
+                        if (result.error) {
+                            throw new Error(result.error);
+                        }
+                        
+                        let resultHTML = `
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6><i class="fas fa-crown me-2 text-warning"></i>Most Likely Author:</h6>
+                                    <div class="alert alert-success">
+                                        <h5 class="mb-1">${result.prediction}</h5>
+                                        <small>Confidence: ${result.confidence}%</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6><i class="fas fa-chart-bar me-2 text-info"></i>All Predictions:</h6>
+                        `;
+                        
+                        for (const [user, score] of Object.entries(result.scores)) {
+                            resultHTML += `
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span>${user}</span>
+                                    <div class="d-flex align-items-center">
+                                        <div class="progress me-2" style="width: 100px; height: 8px;">
+                                            <div class="progress-bar" style="width: ${score}%"></div>
+                                        </div>
+                                        <span class="badge bg-primary">${score}%</span>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                        
+                        resultHTML += `
+                                </div>
+                            </div>
+                        `;
+                        
+                        predictionContent.innerHTML = resultHTML;
+                        predictionResult.style.display = 'block';
+                        
+                    } catch (error) {
+                        console.error('Prediction error:', error);
+                        predictionContent.innerHTML = `
+                            <div class="alert alert-danger">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                Error: ${error.message}
+                            </div>
+                        `;
+                        predictionResult.style.display = 'block';
+                    } finally {
+                        predictBtn.disabled = false;
+                        predictBtn.innerHTML = '<i class="fas fa-magic me-2"></i>Predict';
+                    }
+                });
+                
+                // Allow Enter key to trigger prediction
+                predictionInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        predictBtn.click();
+                    }
+                });
+            }
+        });
+
+        async function testConnection() {
+            try {
+                const response = await fetch('/test');
+                const result = await response.json();
+                alert('Connection test: ' + result.message);
+                console.log('Test result:', result);
+            } catch (error) {
+                alert('Connection failed: ' + error.message);
+                console.error('Test error:', error);
+            }
+        }
+    </script>
+</body>
+</html>
