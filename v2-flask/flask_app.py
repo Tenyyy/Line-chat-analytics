@@ -392,20 +392,58 @@ class LineAnalyzer:
             print(f"Chat types chart error: {e}")
         
         try:
-            # 6. Messages over time (if datetime available)
+            # 6. Messages over time (with cumulative option)
             if 'datetime' in df_clean.columns and not df_clean['datetime'].isna().all():
                 daily_counts = df_clean.groupby(df_clean['datetime'].dt.date).size()
+                
+                # Regular daily messages
                 fig6 = px.line(
                     x=daily_counts.index, 
                     y=daily_counts.values
                 )
-                fig6.update_traces(line_color='#06c755', line_width=2)
+                fig6.update_traces(line_color='#06c755', line_width=2, name='Daily Messages')
                 fig6.update_layout(
                     template='plotly_white',
                     xaxis_title='Date', 
                     yaxis_title='Messages per Day',
-                    height=400
+                    height=400,
+                    updatemenus=[
+                        dict(
+                            type="buttons",
+                            direction="left",
+                            buttons=list([
+                                dict(
+                                    args=[{"visible": [True, False]}],
+                                    label="Daily",
+                                    method="update"
+                                ),
+                                dict(
+                                    args=[{"visible": [False, True]}],
+                                    label="Cumulative",
+                                    method="update"
+                                )
+                            ]),
+                            pad={"r": 10, "t": 10},
+                            showactive=True,
+                            x=0.11,
+                            xanchor="left",
+                            y=1.15,
+                            yanchor="top"
+                        ),
+                    ]
                 )
+                
+                # Add cumulative trace (hidden by default)
+                cumulative_counts = daily_counts.cumsum()
+                fig6.add_scatter(
+                    x=cumulative_counts.index,
+                    y=cumulative_counts.values,
+                    mode='lines',
+                    line=dict(color='#00d084', width=3),
+                    name='Cumulative Messages',
+                    visible=False
+                )
+                
                 plots['messages_over_time'] = fig6.to_json()
         except Exception as e:
             print(f"Messages over time chart error: {e}")
@@ -624,7 +662,7 @@ class LineAnalyzer:
             return {"prediction": "Unknown", "confidence": 0, "scores": {}}
     
     def get_advanced_stats(self):
-        """Get advanced statistics and insights"""
+        """Get detailed individual participant insights and advanced analytics"""
         if self.df is None:
             return {}
         
@@ -635,84 +673,573 @@ class LineAnalyzer:
             
             stats = {}
             
-            # Message length analysis
-            df_text['message_length'] = df_text['chat'].str.len()
-            stats['message_length'] = {
-                'average': round(df_text['message_length'].mean(), 1),
-                'median': round(df_text['message_length'].median(), 1),
-                'longest': int(df_text['message_length'].max()),
-                'shortest': int(df_text['message_length'].min()),
-                'by_user': df_text.groupby('name')['message_length'].mean().round(1).to_dict()
-            }
+            # Individual participant detailed analysis
+            participant_insights = {}
             
-            # Activity patterns
-            if 'hour' in df_clean.columns:
-                peak_hour = df_clean['hour'].mode().iloc[0] if not df_clean['hour'].empty else 0
-                stats['activity_patterns'] = {
-                    'peak_hour': int(peak_hour),
-                    'hourly_distribution': df_clean.groupby('hour').size().to_dict(),
+            for user in df_text['name'].unique():
+                user_data = df_clean[df_clean['name'] == user]
+                user_text = df_text[df_text['name'] == user]
+                
+                # Message type analysis for each user
+                photos_sent = len(user_data[user_data['chat'].str.contains(r'\[Photo\]', na=False)])
+                stickers_sent = len(user_data[user_data['chat'].str.contains(r'\[Sticker\]', na=False)])
+                voice_messages = len(user_data[user_data['chat'].str.contains(r'\[Voice message\]', na=False)])
+                videos_sent = len(user_data[user_data['chat'].str.contains(r'\[Video\]', na=False)])
+                files_sent = len(user_data[user_data['chat'].str.contains(r'\[File\]', na=False)])
+                calls_made = len(user_data[user_data['chat'].str.contains(r'☎', na=False)])
+                
+                # Text message analysis
+                text_messages = len(user_text)
+                if text_messages > 0:
+                    avg_message_length = round(user_text['chat'].str.len().mean(), 1)
+                    longest_message = int(user_text['chat'].str.len().max())
+                    
+                    # Emoji analysis
+                    emoji_pattern = re.compile("["
+                        u"\U0001F600-\U0001F64F"  # emoticons
+                        u"\U0001F300-\U0001F5FF"  # symbols & pictographs
+                        u"\U0001F680-\U0001F6FF"  # transport & map symbols
+                        u"\U0001F1E0-\U0001F1FF"  # flags (iOS)
+                        u"\U00002702-\U000027B0"
+                        u"\U000024C2-\U0001F251"
+                        "]+", flags=re.UNICODE)
+                    
+                    user_emojis = []
+                    for message in user_text['chat']:
+                        emojis = emoji_pattern.findall(str(message))
+                        user_emojis.extend(emojis)
+                    
+                    emoji_count = Counter(user_emojis)
+                    top_emojis = dict(emoji_count.most_common(5))
+                    total_emojis = sum(emoji_count.values())
+                else:
+                    avg_message_length = 0
+                    longest_message = 0
+                    top_emojis = {}
+                    total_emojis = 0
+                
+                # Activity time analysis
+                activity_by_hour = {}
+                if 'hour' in user_data.columns:
+                    activity_by_hour = user_data['hour'].value_counts().to_dict()
+                    most_active_hour = user_data['hour'].mode().iloc[0] if not user_data['hour'].empty else 0
+                else:
+                    most_active_hour = 0
+                
+                participant_insights[user] = {
+                    'total_messages': len(user_data),
+                    'text_messages': text_messages,
+                    'photos_sent': photos_sent,
+                    'stickers_sent': stickers_sent,
+                    'voice_messages': voice_messages,
+                    'videos_sent': videos_sent,
+                    'files_sent': files_sent,
+                    'calls_made': calls_made,
+                    'avg_message_length': avg_message_length,
+                    'longest_message': longest_message,
+                    'total_emojis_used': total_emojis,
+                    'top_emojis': top_emojis,
+                    'most_active_hour': int(most_active_hour),
+                    'activity_by_hour': activity_by_hour,
+                    'activity_percentage': round((len(user_data) / len(df_clean)) * 100, 1)
                 }
             
-            # Conversation starters (who sends first message after long gaps)
+            stats['participant_insights'] = participant_insights
+            
+            # Individual response patterns with detailed analysis
             if 'datetime' in df_clean.columns:
                 df_sorted = df_clean.sort_values('datetime')
-                df_sorted['time_diff'] = df_sorted['datetime'].diff()
-                # Consider messages after 1+ hour gap as conversation starters
-                conversation_starters = df_sorted[df_sorted['time_diff'] > pd.Timedelta(hours=1)]
-                if len(conversation_starters) > 0:
-                    starter_counts = conversation_starters['name'].value_counts()
-                    stats['conversation_starters'] = starter_counts.to_dict()
+                user_response_patterns = {}
+                
+                for user in df_text['name'].unique():
+                    response_times = []
+                    conversations_started = 0
+                    responses_given = 0
+                    total_possible_responses = 0
+                    night_owl_messages = 0  # Messages sent between 10PM-6AM
+                    early_bird_messages = 0  # Messages sent between 5AM-8AM
+                    
+                    user_messages = df_sorted[df_sorted['name'] == user]
+                    
+                    # Analyze time-based patterns
+                    if 'hour' in user_messages.columns:
+                        night_owl_messages = len(user_messages[user_messages['hour'].between(22, 23) | user_messages['hour'].between(0, 5)])
+                        early_bird_messages = len(user_messages[user_messages['hour'].between(5, 7)])
+                    
+                    for i in range(1, len(df_sorted)):
+                        prev_msg = df_sorted.iloc[i-1]
+                        curr_msg = df_sorted.iloc[i]
+                        
+                        if curr_msg['name'] == user:
+                            # Check if this is a response to someone else
+                            if prev_msg['name'] != user:
+                                total_possible_responses += 1
+                                time_diff = curr_msg['datetime'] - prev_msg['datetime']
+                                if time_diff < pd.Timedelta(hours=2):  # Within 2 hours
+                                    response_times.append(time_diff.total_seconds() / 60)
+                                    responses_given += 1
+                            
+                            # Check if this is a conversation starter (after long gap)
+                            time_diff = curr_msg['datetime'] - prev_msg['datetime']
+                            if time_diff > pd.Timedelta(hours=1):
+                                conversations_started += 1
+                    
+                    # Calculate response statistics
+                    if response_times:
+                        avg_response = round(np.mean(response_times), 1)
+                        median_response = round(np.median(response_times), 1)
+                        quick_responses = len([t for t in response_times if t < 1])
+                        super_quick_responses = len([t for t in response_times if t < 0.1])  # Under 6 seconds
+                        slow_responses = len([t for t in response_times if t > 60])  # Over 1 hour
+                        fastest_response = round(min(response_times), 2)
+                        slowest_response = round(max(response_times), 1)
+                        response_rate = round((responses_given / max(total_possible_responses, 1)) * 100, 1)
+                    else:
+                        avg_response = 0
+                        median_response = 0
+                        quick_responses = 0
+                        super_quick_responses = 0
+                        slow_responses = 0
+                        fastest_response = 0
+                        slowest_response = 0
+                        response_rate = 0
+                    
+                    # Calculate response speed ranking
+                    response_speed_score = 0
+                    if response_times:
+                        # Lower average time = higher score
+                        response_speed_score = max(0, 100 - avg_response)
+                    
+                    user_response_patterns[user] = {
+                        'avg_response_time_minutes': avg_response,
+                        'median_response_time_minutes': median_response,
+                        'quick_responses_count': quick_responses,
+                        'super_quick_responses_count': super_quick_responses,
+                        'slow_responses_count': slow_responses,
+                        'fastest_response_minutes': fastest_response,
+                        'slowest_response_minutes': slowest_response,
+                        'conversations_started': conversations_started,
+                        'response_rate_percentage': response_rate,
+                        'response_speed_score': round(response_speed_score, 1),
+                        'total_responses_given': responses_given,
+                        'night_owl_messages': night_owl_messages,
+                        'early_bird_messages': early_bird_messages,
+                        'response_style': 'Lightning Fast ⚡' if avg_response < 1 else 'Quick Responder 🏃' if avg_response < 5 else 'Thoughtful Replier 🤔' if avg_response < 30 else 'Takes Time 🐌'
+                    }
+                
+                stats['individual_response_patterns'] = user_response_patterns
             
-            # Emoji usage analysis
-            emoji_pattern = re.compile("["
-                u"\U0001F600-\U0001F64F"  # emoticons
-                u"\U0001F300-\U0001F5FF"  # symbols & pictographs
-                u"\U0001F680-\U0001F6FF"  # transport & map symbols
-                u"\U0001F1E0-\U0001F1FF"  # flags (iOS)
-                u"\U00002702-\U000027B0"
-                u"\U000024C2-\U0001F251"
-                "]+", flags=re.UNICODE)
-            
-            user_emojis = {}
+            # Communication style analysis
+            communication_styles = {}
             for user in df_text['name'].unique():
                 user_messages = df_text[df_text['name'] == user]['chat']
-                all_emojis = []
-                for message in user_messages:
-                    emojis = emoji_pattern.findall(str(message))
-                    all_emojis.extend(emojis)
                 
-                emoji_count = Counter(all_emojis)
-                user_emojis[user] = dict(emoji_count.most_common(10))
-            
-            stats['emoji_usage'] = user_emojis
-            
-            # Response time patterns (simplified)
-            if 'datetime' in df_clean.columns:
-                df_sorted = df_clean.sort_values('datetime')
-                response_times = []
-                
-                for i in range(1, min(len(df_sorted), 1000)):  # Limit for performance
-                    prev_msg = df_sorted.iloc[i-1]
-                    curr_msg = df_sorted.iloc[i]
+                if len(user_messages) > 0:
+                    # Calculate communication metrics
+                    short_messages = len([msg for msg in user_messages if len(str(msg)) < 20])
+                    medium_messages = len([msg for msg in user_messages if 20 <= len(str(msg)) < 100])
+                    long_messages = len([msg for msg in user_messages if len(str(msg)) >= 100])
                     
-                    # Check if it's a response (different user, within reasonable time)
-                    if (prev_msg['name'] != curr_msg['name']):
-                        time_diff = curr_msg['datetime'] - prev_msg['datetime']
-                        if time_diff < pd.Timedelta(hours=2):  # Within 2 hours
-                            response_times.append(time_diff.total_seconds() / 60)  # Convert to minutes
-                
-                if response_times:
-                    stats['response_patterns'] = {
-                        'average_response_time_minutes': round(np.mean(response_times), 1),
-                        'median_response_time_minutes': round(np.median(response_times), 1),
-                        'quick_responses_under_1min': len([t for t in response_times if t < 1])
+                    # Question asking frequency
+                    questions = len([msg for msg in user_messages if '?' in str(msg)])
+                    
+                    # Exclamation usage
+                    exclamations = len([msg for msg in user_messages if '!' in str(msg)])
+                    
+                    communication_styles[user] = {
+                        'short_messages_percentage': round((short_messages / len(user_messages)) * 100, 1),
+                        'medium_messages_percentage': round((medium_messages / len(user_messages)) * 100, 1),
+                        'long_messages_percentage': round((long_messages / len(user_messages)) * 100, 1),
+                        'questions_asked': questions,
+                        'exclamations_used': exclamations,
+                        'question_frequency': round((questions / len(user_messages)) * 100, 1),
+                        'exclamation_frequency': round((exclamations / len(user_messages)) * 100, 1)
                     }
+            
+            stats['communication_styles'] = communication_styles
+            
+            # Personalized fun facts for each participant
+            personalized_fun_facts = {}
+            
+            for user in df_text['name'].unique():
+                user_data = df_clean[df_clean['name'] == user]
+                user_text = df_text[df_text['name'] == user]
+                fun_facts = []
+                
+                # Message timing facts
+                if 'hour' in user_data.columns and len(user_data) > 0:
+                    most_active_hour = user_data['hour'].mode().iloc[0] if not user_data['hour'].empty else 0
+                    hour_counts = user_data['hour'].value_counts()
+                    
+                    if most_active_hour >= 22 or most_active_hour <= 5:
+                        fun_facts.append(f"🌙 Night Owl - Most active at {most_active_hour}:00")
+                    elif most_active_hour >= 5 and most_active_hour <= 8:
+                        fun_facts.append(f"🌅 Early Bird - Most active at {most_active_hour}:00")
+                    else:
+                        fun_facts.append(f"☀️ Day Person - Most active at {most_active_hour}:00")
+                
+                # Message length personality
+                if len(user_text) > 0:
+                    avg_length = user_text['chat'].str.len().mean()
+                    if avg_length < 20:
+                        fun_facts.append("📝 Short & Sweet - Keeps messages concise")
+                    elif avg_length > 100:
+                        fun_facts.append("📚 Storyteller - Loves detailed messages")
+                    else:
+                        fun_facts.append("💬 Balanced Writer - Perfect message length")
+                
+                # Media sharing personality
+                photos = len(user_data[user_data['chat'].str.contains(r'\[Photo\]', na=False)])
+                stickers = len(user_data[user_data['chat'].str.contains(r'\[Sticker\]', na=False)])
+                voice_msgs = len(user_data[user_data['chat'].str.contains(r'\[Voice message\]', na=False)])
+                
+                total_media = photos + stickers + voice_msgs
+                if total_media > len(user_text) * 0.3:  # More than 30% media
+                    if stickers > photos and stickers > voice_msgs:
+                        fun_facts.append("🎭 Sticker Master - Expresses with stickers")
+                    elif photos > stickers and photos > voice_msgs:
+                        fun_facts.append("📸 Photo Enthusiast - Loves sharing moments")
+                    elif voice_msgs > photos and voice_msgs > stickers:
+                        fun_facts.append("🎤 Voice Message Pro - Prefers speaking")
+                    else:
+                        fun_facts.append("🎨 Media Mixer - Uses all types of content")
+                
+                # Emoji personality
+                user_emojis = []
+                for message in user_text['chat']:
+                    emoji_pattern = re.compile("["
+                        u"\U0001F600-\U0001F64F"  # emoticons
+                        u"\U0001F300-\U0001F5FF"  # symbols & pictographs
+                        u"\U0001F680-\U0001F6FF"  # transport & map symbols
+                        u"\U0001F1E0-\U0001F1FF"  # flags (iOS)
+                        u"\U00002702-\U000027B0"
+                        u"\U000024C2-\U0001F251"
+                        "]+", flags=re.UNICODE)
+                    emojis = emoji_pattern.findall(str(message))
+                    user_emojis.extend(emojis)
+                
+                emoji_ratio = len(user_emojis) / max(len(user_text), 1)
+                if emoji_ratio > 0.5:
+                    fun_facts.append("😍 Emoji Enthusiast - Messages full of emojis")
+                elif emoji_ratio < 0.1:
+                    fun_facts.append("📖 Text Purist - Minimal emoji usage")
+                else:
+                    fun_facts.append("😊 Emoji Balanced - Uses emojis just right")
+                
+                # Response behavior
+                if user in stats.get('individual_response_patterns', {}):
+                    response_data = stats['individual_response_patterns'][user]
+                    avg_response = response_data['avg_response_time_minutes']
+                    
+                    if avg_response < 1:
+                        fun_facts.append("⚡ Lightning Responder - Replies in seconds")
+                    elif avg_response < 5:
+                        fun_facts.append("🏃 Quick Replier - Fast responses")
+                    elif avg_response > 60:
+                        fun_facts.append("🤔 Thoughtful Responder - Takes time to reply")
+                    
+                    if response_data.get('conversations_started', 0) > len(df_text['name'].unique()) * 2:
+                        fun_facts.append("🎬 Conversation Starter - Often initiates chats")
+                
+                # Communication style facts
+                if user in communication_styles:
+                    style = communication_styles[user]
+                    if style['question_frequency'] > 20:
+                        fun_facts.append("❓ Curious Mind - Asks lots of questions")
+                    if style['exclamation_frequency'] > 15:
+                        fun_facts.append("🎉 Enthusiastic - Loves exclamation marks")
+                
+                # Activity level
+                total_messages = len(user_data)
+                if len(df_clean['name'].unique()) > 1:
+                    activity_percentage = (total_messages / len(df_clean)) * 100
+                    if activity_percentage > 60:
+                        fun_facts.append("💬 Chat Champion - Dominates conversations")
+                    elif activity_percentage < 20:
+                        fun_facts.append("🎧 Quiet Observer - Listens more than talks")
+                    else:
+                        fun_facts.append("⚖️ Balanced Participant - Perfect chat balance")
+                
+                # Ensure we have at least 3-4 fun facts, add generic ones if needed
+                if len(fun_facts) < 3:
+                    fun_facts.extend([
+                        f"📊 Sent {total_messages} total messages",
+                        f"🗓️ Been chatting for {(df_clean['datetime'].max() - df_clean['datetime'].min()).days} days"
+                    ])
+                
+                personalized_fun_facts[user] = fun_facts[:5]  # Limit to 5 fun facts per user
+            
+            stats['personalized_fun_facts'] = personalized_fun_facts
+            
+            # ADVANCED RELATIONSHIP METRICS
+            relationship_metrics = self._analyze_relationships(df_clean, df_text)
+            stats['relationship_metrics'] = relationship_metrics
+            
+            # CONVERSATION DYNAMICS
+            conversation_dynamics = self._analyze_conversation_dynamics(df_clean)
+            stats['conversation_dynamics'] = conversation_dynamics
+            
+            # TEMPORAL PATTERNS
+            temporal_patterns = self._analyze_temporal_patterns(df_clean)
+            stats['temporal_patterns'] = temporal_patterns
+            
+            # ENGAGEMENT METRICS
+            engagement_metrics = self._analyze_engagement(df_clean, df_text)
+            stats['engagement_metrics'] = engagement_metrics
             
             return stats
             
         except Exception as e:
             print(f"Advanced stats error: {e}")
             return {}
+    
+    def _analyze_relationships(self, df_clean, df_text):
+        """Analyze relationship dynamics between participants"""
+        relationships = {}
+        
+        try:
+            users = df_text['name'].unique()
+            
+            if len(users) >= 2:
+                for i, user1 in enumerate(users):
+                    for user2 in users[i+1:]:
+                        # Message exchange ratio
+                        user1_msgs = len(df_text[df_text['name'] == user1])
+                        user2_msgs = len(df_text[df_text['name'] == user2])
+                        
+                        # Response rate to each other
+                        if 'datetime' in df_clean.columns:
+                            df_sorted = df_clean.sort_values('datetime')
+                            user1_to_user2 = 0
+                            user2_to_user1 = 0
+                            
+                            for i in range(1, min(len(df_sorted), 5000)):
+                                prev_msg = df_sorted.iloc[i-1]
+                                curr_msg = df_sorted.iloc[i]
+                                
+                                if prev_msg['name'] == user1 and curr_msg['name'] == user2:
+                                    time_diff = curr_msg['datetime'] - prev_msg['datetime']
+                                    if time_diff < pd.Timedelta(hours=2):
+                                        user1_to_user2 += 1
+                                        
+                                elif prev_msg['name'] == user2 and curr_msg['name'] == user1:
+                                    time_diff = curr_msg['datetime'] - prev_msg['datetime']
+                                    if time_diff < pd.Timedelta(hours=2):
+                                        user2_to_user1 += 1
+                            
+                            # Conversation balance score (0-100, 50 is perfect balance)
+                            total_exchanges = user1_to_user2 + user2_to_user1
+                            if total_exchanges > 0:
+                                balance_score = 50 - abs(50 - (user1_to_user2 / total_exchanges * 100))
+                            else:
+                                balance_score = 0
+                            
+                            # Mutual responsiveness
+                            mutual_response_rate = (user1_to_user2 + user2_to_user1) / max(user1_msgs + user2_msgs, 1) * 100
+                            
+                            relationships[f"{user1} ↔ {user2}"] = {
+                                'message_ratio': f"{user1_msgs}:{user2_msgs}",
+                                'balance_score': round(balance_score, 1),
+                                'mutual_responses': user1_to_user2 + user2_to_user1,
+                                'response_rate': round(mutual_response_rate, 1),
+                                'connection_strength': 'Strong 💪' if mutual_response_rate > 40 else 'Good 👍' if mutual_response_rate > 20 else 'Moderate 🤝',
+                                f'{user1}_initiates': user1_to_user2,
+                                f'{user2}_initiates': user2_to_user1
+                            }
+            
+        except Exception as e:
+            print(f"Relationship analysis error: {e}")
+        
+        return relationships
+    
+    def _analyze_conversation_dynamics(self, df_clean):
+        """Analyze conversation flow and patterns"""
+        dynamics = {}
+        
+        try:
+            if 'datetime' in df_clean.columns:
+                df_sorted = df_clean.sort_values('datetime')
+                
+                # Conversation streak analysis
+                max_streak = 0
+                current_streak = 1
+                streak_holder = None
+                max_streak_holder = None
+                prev_user = None
+                
+                for _, row in df_sorted.iterrows():
+                    if row['name'] == prev_user:
+                        current_streak += 1
+                        if current_streak > max_streak:
+                            max_streak = current_streak
+                            max_streak_holder = row['name']
+                    else:
+                        current_streak = 1
+                        prev_user = row['name']
+                
+                dynamics['longest_streak'] = {
+                    'user': max_streak_holder,
+                    'count': max_streak
+                }
+                
+                # Average conversation length (messages before long gap)
+                conversation_lengths = []
+                conv_length = 0
+                
+                for i in range(1, len(df_sorted)):
+                    time_diff = df_sorted.iloc[i]['datetime'] - df_sorted.iloc[i-1]['datetime']
+                    if time_diff < pd.Timedelta(hours=1):
+                        conv_length += 1
+                    else:
+                        if conv_length > 0:
+                            conversation_lengths.append(conv_length)
+                        conv_length = 0
+                
+                if conversation_lengths:
+                    dynamics['avg_conversation_length'] = round(np.mean(conversation_lengths), 1)
+                    dynamics['longest_conversation'] = max(conversation_lengths)
+                    dynamics['total_conversations'] = len(conversation_lengths)
+                
+                # Peak activity analysis
+                if 'hour' in df_clean.columns:
+                    hourly_activity = df_clean.groupby('hour').size()
+                    peak_hour = hourly_activity.idxmax()
+                    peak_count = hourly_activity.max()
+                    quiet_hour = hourly_activity.idxmin()
+                    
+                    dynamics['peak_activity'] = {
+                        'hour': int(peak_hour),
+                        'messages': int(peak_count),
+                        'quiet_hour': int(quiet_hour)
+                    }
+        
+        except Exception as e:
+            print(f"Conversation dynamics error: {e}")
+        
+        return dynamics
+    
+    def _analyze_temporal_patterns(self, df_clean):
+        """Analyze time-based patterns and trends"""
+        patterns = {}
+        
+        try:
+            if 'datetime' in df_clean.columns:
+                # Weekend vs weekday analysis
+                df_clean['is_weekend'] = df_clean['datetime'].dt.dayofweek.isin([5, 6])
+                weekend_msgs = len(df_clean[df_clean['is_weekend']])
+                weekday_msgs = len(df_clean[~df_clean['is_weekend']])
+                
+                patterns['weekend_vs_weekday'] = {
+                    'weekend_messages': weekend_msgs,
+                    'weekday_messages': weekday_msgs,
+                    'weekend_percentage': round((weekend_msgs / len(df_clean)) * 100, 1),
+                    'preference': 'Weekend Chattier 🎉' if weekend_msgs > weekday_msgs else 'Weekday Active 💼'
+                }
+                
+                # Monthly trends
+                df_clean['month'] = df_clean['datetime'].dt.to_period('M')
+                monthly_counts = df_clean.groupby('month').size()
+                
+                if len(monthly_counts) > 1:
+                    # Calculate growth rate
+                    first_month = monthly_counts.iloc[0]
+                    last_month = monthly_counts.iloc[-1]
+                    growth_rate = ((last_month - first_month) / first_month) * 100 if first_month > 0 else 0
+                    
+                    patterns['chat_trend'] = {
+                        'most_active_month': str(monthly_counts.idxmax()),
+                        'peak_messages': int(monthly_counts.max()),
+                        'growth_rate': round(growth_rate, 1),
+                        'trend': 'Growing 📈' if growth_rate > 10 else 'Declining 📉' if growth_rate < -10 else 'Stable 📊'
+                    }
+                
+                # Season analysis (if data spans multiple seasons)
+                df_clean['season'] = df_clean['datetime'].dt.month % 12 // 3
+                season_map = {0: 'Winter', 1: 'Spring', 2: 'Summer', 3: 'Fall'}
+                df_clean['season_name'] = df_clean['season'].map(season_map)
+                season_counts = df_clean['season_name'].value_counts()
+                
+                if len(season_counts) > 0:
+                    patterns['seasonal_preference'] = {
+                        'favorite_season': season_counts.idxmax(),
+                        'messages': int(season_counts.max())
+                    }
+        
+        except Exception as e:
+            print(f"Temporal patterns error: {e}")
+        
+        return patterns
+    
+    def _analyze_engagement(self, df_clean, df_text):
+        """Analyze engagement levels and interaction quality"""
+        engagement = {}
+        
+        try:
+            users = df_text['name'].unique()
+            
+            for user in users:
+                user_data = df_clean[df_clean['name'] == user]
+                user_text = df_text[df_text['name'] == user]
+                
+                # Calculate engagement score (0-100)
+                score = 0
+                factors = []
+                
+                # Message frequency (max 30 points)
+                msg_percentage = (len(user_data) / len(df_clean)) * 100
+                freq_score = min(msg_percentage * 0.6, 30)
+                score += freq_score
+                
+                # Media sharing (max 20 points)
+                photos = len(user_data[user_data['chat'].str.contains(r'\[Photo\]', na=False)])
+                stickers = len(user_data[user_data['chat'].str.contains(r'\[Sticker\]', na=False)])
+                media_ratio = (photos + stickers) / max(len(user_data), 1)
+                media_score = min(media_ratio * 100, 20)
+                score += media_score
+                
+                # Message length diversity (max 20 points)
+                if len(user_text) > 0:
+                    lengths = user_text['chat'].str.len()
+                    length_std = lengths.std()
+                    diversity_score = min(length_std / 10, 20)
+                    score += diversity_score
+                
+                # Response activity (max 30 points)
+                if 'datetime' in df_clean.columns:
+                    df_sorted = df_clean.sort_values('datetime')
+                    responses = 0
+                    for i in range(1, len(df_sorted)):
+                        if df_sorted.iloc[i]['name'] == user and df_sorted.iloc[i-1]['name'] != user:
+                            time_diff = df_sorted.iloc[i]['datetime'] - df_sorted.iloc[i-1]['datetime']
+                            if time_diff < pd.Timedelta(hours=2):
+                                responses += 1
+                    
+                    response_rate = (responses / max(len(user_data), 1)) * 100
+                    response_score = min(response_rate, 30)
+                    score += response_score
+                
+                # Engagement level classification
+                if score >= 70:
+                    level = 'Super Engaged 🔥'
+                elif score >= 50:
+                    level = 'Highly Engaged ⭐'
+                elif score >= 30:
+                    level = 'Moderately Engaged 👌'
+                else:
+                    level = 'Casual Chatter 💬'
+                
+                engagement[user] = {
+                    'engagement_score': round(score, 1),
+                    'engagement_level': level,
+                    'message_contribution': round(msg_percentage, 1),
+                    'media_activity': round(media_ratio * 100, 1),
+                    'interaction_quality': 'High 💎' if score >= 60 else 'Good ✨' if score >= 40 else 'Fair 👍'
+                }
+        
+        except Exception as e:
+            print(f"Engagement analysis error: {e}")
+        
+        return engagement
 
 # Initialize analyzer
 analyzer = LineAnalyzer()

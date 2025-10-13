@@ -255,6 +255,46 @@
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
         }
+        
+        .bg-gradient-primary {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)) !important;
+        }
+        
+        .text-purple {
+            color: #6f42c1 !important;
+        }
+        
+        .participant-card {
+            transition: all 0.3s ease;
+            border: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .participant-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+        
+        .border-4 {
+            border-width: 4px !important;
+        }
+        
+        .fun-facts-card {
+            background: white !important;
+        }
+        
+        .fun-fact-item {
+            background-color: #f8f9fa !important;
+            color: #212529 !important;
+            border: 1px solid #e9ecef !important;
+            font-weight: 500;
+        }
+        
+        .fun-fact-item:hover {
+            background-color: #e9ecef !important;
+            transform: translateX(5px);
+            transition: all 0.2s ease;
+        }
     </style>
 </head>
 <body>
@@ -518,41 +558,78 @@
         <!-- Advanced Statistics Section -->
         <div id="advancedStatsSection" style="display: none;" class="fade-in">
             <div class="section-header">
-                <h2><i class="fas fa-microscope me-3"></i>Advanced Insights</h2>
+                <h2><i class="fas fa-microscope me-3"></i>Individual Participant Insights</h2>
             </div>
             
-            <div class="row">
-                <!-- Message Length Analysis -->
-                <div class="col-lg-6 mb-4">
+            <!-- Participant Insights -->
+            <div class="row mb-4">
+                <div class="col-12">
                     <div class="chart-container">
-                        <h4 class="mb-3"><i class="fas fa-ruler-horizontal me-2 text-info"></i>Message Length Analysis</h4>
-                        <div id="messageLengthStats"></div>
-                    </div>
-                </div>
-                
-                <!-- Response Patterns -->
-                <div class="col-lg-6 mb-4">
-                    <div class="chart-container">
-                        <h4 class="mb-3"><i class="fas fa-clock me-2 text-warning"></i>Response Patterns</h4>
-                        <div id="responsePatternStats"></div>
+                        <h4 class="mb-3"><i class="fas fa-user-friends me-2 text-primary"></i>Detailed User Analysis</h4>
+                        <div id="participantInsights"></div>
                     </div>
                 </div>
             </div>
             
             <div class="row">
-                <!-- Conversation Starters -->
+                <!-- Individual Response Patterns -->
                 <div class="col-lg-6 mb-4">
                     <div class="chart-container">
-                        <h4 class="mb-3"><i class="fas fa-comments me-2 text-success"></i>Conversation Starters</h4>
-                        <div id="conversationStarterStats"></div>
+                        <h4 class="mb-3"><i class="fas fa-clock me-2 text-warning"></i>Individual Response Patterns</h4>
+                        <div id="individualResponsePatterns"></div>
                     </div>
                 </div>
                 
-                <!-- Emoji Usage -->
+                <!-- Communication Styles -->
                 <div class="col-lg-6 mb-4">
                     <div class="chart-container">
-                        <h4 class="mb-3"><i class="fas fa-smile me-2 text-primary"></i>Emoji Champions</h4>
-                        <div id="emojiUsageStats"></div>
+                        <h4 class="mb-3"><i class="fas fa-comments me-2 text-info"></i>Communication Styles</h4>
+                        <div id="communicationStyles"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- NEW: Relationship Metrics -->
+            <div class="section-header mt-4">
+                <h2><i class="fas fa-heart me-3"></i>Relationship Dynamics</h2>
+            </div>
+            
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="chart-container">
+                        <h4 class="mb-3"><i class="fas fa-exchange-alt me-2 text-danger"></i>Connection Analysis</h4>
+                        <div id="relationshipMetrics"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- NEW: Conversation Dynamics & Temporal Patterns -->
+            <div class="row">
+                <div class="col-lg-6 mb-4">
+                    <div class="chart-container">
+                        <h4 class="mb-3"><i class="fas fa-chart-line me-2 text-success"></i>Conversation Dynamics</h4>
+                        <div id="conversationDynamics"></div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-6 mb-4">
+                    <div class="chart-container">
+                        <h4 class="mb-3"><i class="fas fa-calendar-alt me-2 text-primary"></i>Temporal Patterns</h4>
+                        <div id="temporalPatterns"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- NEW: Engagement Metrics -->
+            <div class="section-header mt-4">
+                <h2><i class="fas fa-fire me-3"></i>Engagement Analysis</h2>
+            </div>
+            
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="chart-container">
+                        <h4 class="mb-3"><i class="fas fa-chart-bar me-2 text-warning"></i>User Engagement Scores</h4>
+                        <div id="engagementMetrics"></div>
                     </div>
                 </div>
             </div>
@@ -732,7 +809,13 @@
                 // Load stats
                 const statsResponse = await fetch('/stats');
                 const stats = await statsResponse.json();
-                displayStats(stats);
+                
+                // Load advanced statistics first to get personalized fun facts
+                const advancedStatsResponse = await fetch('/advanced_stats');
+                const advancedStatsData = await advancedStatsResponse.json();
+                
+                // Display stats with advanced data for fun facts
+                displayStats(stats, advancedStatsData);
 
                 // Load visualizations
                 const vizResponse = await fetch('/visualizations');
@@ -749,9 +832,7 @@
                 const wordFreqData = await wordFreqResponse.json();
                 displayWordFrequencies(wordFreqData);
 
-                // Load advanced statistics
-                const advancedStatsResponse = await fetch('/advanced_stats');
-                const advancedStatsData = await advancedStatsResponse.json();
+                // Display advanced statistics
                 displayAdvancedStats(advancedStatsData);
 
             } catch (error) {
@@ -760,7 +841,7 @@
             }
         }
 
-        function displayStats(stats) {
+        function displayStats(stats, advancedStats = null) {
             // Basic stats
             document.getElementById('totalMessages').textContent = formatNumber(stats.total_messages || 0);
             document.getElementById('totalParticipants').textContent = stats.participants || 0;
@@ -798,8 +879,8 @@
             }
             userStatsDiv.innerHTML = userStatsHTML;
 
-            // Display fun facts
-            displayFunFacts(stats);
+            // Display fun facts with advanced stats for personalization
+            displayFunFacts(stats, advancedStats);
 
             // Show stats sections with animation
             setTimeout(() => {
@@ -809,37 +890,70 @@
             }, 300);
         }
         
-        function displayFunFacts(stats) {
+        function displayFunFacts(stats, advancedStats = null) {
             const funFactsDiv = document.getElementById('funFactsContent');
             let funFactsHTML = '';
             
-            if (stats.chat_type_counts) {
-                const facts = [
-                    { icon: 'fas fa-images', label: 'Photos Shared', value: formatNumber(stats.chat_type_counts['[Photo]'] || 0), color: 'warning' },
-                    { icon: 'fas fa-laugh', label: 'Stickers Sent', value: formatNumber(stats.chat_type_counts['[Sticker]'] || 0), color: 'info' },
-                    { icon: 'fas fa-video', label: 'Videos Shared', value: formatNumber(stats.chat_type_counts['[Video]'] || 0), color: 'danger' },
-                    { icon: 'fas fa-phone-slash', label: 'Missed Calls', value: formatNumber(stats.chat_type_counts['☎ Missed call'] || 0), color: 'secondary' },
-                    { icon: 'fas fa-file', label: 'Files Shared', value: formatNumber(stats.chat_type_counts['[File]'] || 0), color: 'success' },
-                    { icon: 'fas fa-microphone', label: 'Voice Messages', value: formatNumber(stats.chat_type_counts['[Voice message]'] || 0), color: 'primary' }
-                ];
+            // Check if we have personalized fun facts from advanced stats
+            if (advancedStats && advancedStats.personalized_fun_facts) {
+                funFactsHTML += '<div class="col-12 mb-4"><h4 class="text-center text-primary"><i class="fas fa-sparkles me-2"></i>Personal Fun Facts</h4></div>';
                 
-                facts.forEach(fact => {
-                    if (parseInt(fact.value) > 0) {
+                for (const [user, facts] of Object.entries(advancedStats.personalized_fun_facts)) {
+                    funFactsHTML += `
+                        <div class="col-lg-6 mb-4">
+                            <div class="card border-0 shadow-sm h-100 fun-facts-card">
+                                <div class="card-header bg-gradient-primary text-white">
+                                    <h5 class="mb-0"><i class="fas fa-user-star me-2"></i>${user}'s Profile</h5>
+                                </div>
+                                <div class="card-body bg-white">
+                                    <div class="d-flex flex-column gap-2">
+                    `;
+                    
+                    facts.forEach(fact => {
                         funFactsHTML += `
-                            <div class="col-md-4 col-sm-6">
-                                <div class="metric-card">
-                                    <div class="d-flex align-items-center">
-                                        <i class="${fact.icon} fa-2x me-3"></i>
-                                        <div>
-                                            <div class="metric-value">${fact.value}</div>
-                                            <div class="metric-label">${fact.label}</div>
-                                        </div>
+                            <div class="fun-fact-item d-flex align-items-center p-3 rounded">
+                                <span style="font-size: 0.95em; line-height: 1.4;">${fact}</span>
+                            </div>
+                        `;
+                    });
+                    
+                    funFactsHTML += `
                                     </div>
                                 </div>
                             </div>
-                        `;
-                    }
-                });
+                        </div>
+                    `;
+                }
+            } else {
+                // Fallback to general fun facts if personalized ones aren't available
+                if (stats.chat_type_counts) {
+                    const facts = [
+                        { icon: 'fas fa-images', label: 'Photos Shared', value: formatNumber(stats.chat_type_counts['[Photo]'] || 0), color: 'warning' },
+                        { icon: 'fas fa-laugh', label: 'Stickers Sent', value: formatNumber(stats.chat_type_counts['[Sticker]'] || 0), color: 'info' },
+                        { icon: 'fas fa-video', label: 'Videos Shared', value: formatNumber(stats.chat_type_counts['[Video]'] || 0), color: 'danger' },
+                        { icon: 'fas fa-phone-slash', label: 'Missed Calls', value: formatNumber(stats.chat_type_counts['☎ Missed call'] || 0), color: 'secondary' },
+                        { icon: 'fas fa-file', label: 'Files Shared', value: formatNumber(stats.chat_type_counts['[File]'] || 0), color: 'success' },
+                        { icon: 'fas fa-microphone', label: 'Voice Messages', value: formatNumber(stats.chat_type_counts['[Voice message]'] || 0), color: 'primary' }
+                    ];
+                    
+                    facts.forEach(fact => {
+                        if (parseInt(fact.value) > 0) {
+                            funFactsHTML += `
+                                <div class="col-md-4 col-sm-6">
+                                    <div class="metric-card">
+                                        <div class="d-flex align-items-center">
+                                            <i class="${fact.icon} fa-2x me-3"></i>
+                                            <div>
+                                                <div class="metric-value">${fact.value}</div>
+                                                <div class="metric-label">${fact.label}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    });
+                }
             }
             
             funFactsDiv.innerHTML = funFactsHTML;
@@ -980,102 +1094,507 @@
         }
         
         function displayAdvancedStats(data) {
-            // Message Length Stats
-            if (data.message_length) {
-                const lengthStats = data.message_length;
-                let lengthHTML = `
-                    <div class="row">
-                        <div class="col-6">
-                            <div class="metric-card bg-light p-3 rounded">
-                                <div class="metric-value text-info">${lengthStats.average}</div>
-                                <div class="metric-label">Average Length</div>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="metric-card bg-light p-3 rounded">
-                                <div class="metric-value text-warning">${lengthStats.longest}</div>
-                                <div class="metric-label">Longest Message</div>
-                            </div>
-                        </div>
-                    </div>
-                    <h6 class="mt-3 mb-2">Average by User:</h6>
-                `;
+            // Participant Insights - Detailed individual analysis
+            if (data.participant_insights) {
+                let insightsHTML = '<div class="row">';
                 
-                for (const [user, avgLength] of Object.entries(lengthStats.by_user)) {
-                    lengthHTML += `
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span>${user}</span>
-                            <span class="badge bg-primary">${avgLength} chars</span>
+                for (const [user, insights] of Object.entries(data.participant_insights)) {
+                    insightsHTML += `
+                        <div class="col-lg-6 mb-4">
+                            <div class="card border-0 shadow-sm h-100">
+                                <div class="card-header bg-gradient-primary text-white">
+                                    <h5 class="mb-0"><i class="fas fa-user me-2"></i>${user}</h5>
+                                    <small>Activity: ${insights.activity_percentage}% of total messages</small>
+                                </div>
+                                <div class="card-body">
+                                    <!-- Message Types -->
+                                    <h6 class="text-primary mb-3"><i class="fas fa-chart-pie me-2"></i>Message Types</h6>
+                                    <div class="row g-2 mb-3">
+                                        <div class="col-4 text-center">
+                                            <div class="bg-light p-2 rounded">
+                                                <i class="fas fa-comments text-primary"></i>
+                                                <div class="fw-bold">${insights.text_messages}</div>
+                                                <small>Text</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-4 text-center">
+                                            <div class="bg-light p-2 rounded">
+                                                <i class="fas fa-images text-warning"></i>
+                                                <div class="fw-bold">${insights.photos_sent}</div>
+                                                <small>Photos</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-4 text-center">
+                                            <div class="bg-light p-2 rounded">
+                                                <i class="fas fa-laugh text-info"></i>
+                                                <div class="fw-bold">${insights.stickers_sent}</div>
+                                                <small>Stickers</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-4 text-center">
+                                            <div class="bg-light p-2 rounded">
+                                                <i class="fas fa-microphone text-success"></i>
+                                                <div class="fw-bold">${insights.voice_messages}</div>
+                                                <small>Voice</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-4 text-center">
+                                            <div class="bg-light p-2 rounded">
+                                                <i class="fas fa-video text-danger"></i>
+                                                <div class="fw-bold">${insights.videos_sent}</div>
+                                                <small>Videos</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-4 text-center">
+                                            <div class="bg-light p-2 rounded">
+                                                <i class="fas fa-phone text-purple"></i>
+                                                <div class="fw-bold">${insights.calls_made}</div>
+                                                <small>Calls</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Text Analysis -->
+                                    <h6 class="text-success mb-2"><i class="fas fa-text-width me-2"></i>Text Style</h6>
+                                    <div class="mb-3">
+                                        <div class="d-flex justify-content-between">
+                                            <small>Avg Length:</small>
+                                            <strong>${insights.avg_message_length} chars</strong>
+                                        </div>
+                                        <div class="d-flex justify-content-between">
+                                            <small>Emojis Used:</small>
+                                            <strong>${insights.total_emojis_used}</strong>
+                                        </div>
+                                        <div class="d-flex justify-content-between">
+                                            <small>Most Active:</small>
+                                            <strong>${insights.most_active_hour}:00</strong>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Top Emojis -->
+                                    <div class="mb-2">
+                                        <h6 class="text-warning mb-2"><i class="fas fa-smile me-2"></i>Favorite Emojis</h6>
+                                        <div class="d-flex flex-wrap gap-1">`;
+                    
+                    if (Object.keys(insights.top_emojis).length > 0) {
+                        for (const [emoji, count] of Object.entries(insights.top_emojis)) {
+                            insightsHTML += `
+                                <span class="badge bg-light text-dark" style="font-size: 0.9em;">
+                                    ${emoji} ${count}
+                                </span>`;
+                        }
+                    } else {
+                        insightsHTML += '<small class="text-muted">No emojis used</small>';
+                    }
+                    
+                    insightsHTML += `
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     `;
                 }
-                document.getElementById('messageLengthStats').innerHTML = lengthHTML;
-            }
-            
-            // Response Patterns
-            if (data.response_patterns) {
-                const responseStats = data.response_patterns;
-                const responseHTML = `
-                    <div class="row">
-                        <div class="col-12">
-                            <div class="metric-card bg-light p-3 rounded mb-3">
-                                <div class="metric-value text-warning">${responseStats.average_response_time_minutes}min</div>
-                                <div class="metric-label">Average Response Time</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="d-flex justify-content-between">
-                        <div class="text-center">
-                            <div class="fw-bold text-success">${responseStats.quick_responses_under_1min}</div>
-                            <small class="text-muted">Quick Responses (&lt;1min)</small>
-                        </div>
-                        <div class="text-center">
-                            <div class="fw-bold text-info">${responseStats.median_response_time_minutes}min</div>
-                            <small class="text-muted">Median Response</small>
-                        </div>
-                    </div>
-                `;
-                document.getElementById('responsePatternStats').innerHTML = responseHTML;
-            }
-            
-            // Conversation Starters
-            if (data.conversation_starters) {
-                let starterHTML = '<p class="text-muted mb-3">Who initiates conversations most often:</p>';
-                const starters = Object.entries(data.conversation_starters)
-                    .sort(([,a], [,b]) => b - a)
-                    .slice(0, 5);
                 
-                starters.forEach(([user, count]) => {
-                    starterHTML += `
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <div class="d-flex align-items-center">
-                                <i class="fas fa-user-circle text-success me-2"></i>
-                                <span>${user}</span>
+                insightsHTML += '</div>';
+                document.getElementById('participantInsights').innerHTML = insightsHTML;
+            }
+            
+            // Individual Response Patterns - Enhanced
+            if (data.individual_response_patterns) {
+                let responseHTML = '';
+                
+                // Sort users by response speed (fastest first)
+                const sortedUsers = Object.entries(data.individual_response_patterns)
+                    .sort(([,a], [,b]) => a.avg_response_time_minutes - b.avg_response_time_minutes);
+                
+                sortedUsers.forEach(([user, patterns], index) => {
+                    const rankEmoji = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '🏃';
+                    const speedBadgeColor = patterns.avg_response_time_minutes < 1 ? 'success' : 
+                                          patterns.avg_response_time_minutes < 5 ? 'warning' : 
+                                          patterns.avg_response_time_minutes < 30 ? 'info' : 'secondary';
+                    
+                    responseHTML += `
+                        <div class="card border-start border-warning border-4 mb-3">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h6 class="card-title text-warning mb-0">
+                                        ${rankEmoji} <i class="fas fa-user-circle me-2"></i>${user}
+                                    </h6>
+                                    <span class="badge bg-${speedBadgeColor}">${patterns.response_style}</span>
+                                </div>
+                                
+                                <!-- Response Speed Metrics -->
+                                <div class="row g-2 mb-3">
+                                    <div class="col-6">
+                                        <div class="bg-light p-2 rounded text-center">
+                                            <div class="fw-bold text-primary">${patterns.avg_response_time_minutes}min</div>
+                                            <small class="text-muted">Average Response</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="bg-light p-2 rounded text-center">
+                                            <div class="fw-bold text-success">${patterns.fastest_response_minutes}min</div>
+                                            <small class="text-muted">Fastest Response</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Response Statistics -->
+                                <div class="row g-2">
+                                    <div class="col-4 text-center">
+                                        <div class="fw-bold text-success">${patterns.super_quick_responses_count}</div>
+                                        <small class="text-muted">⚡ Instant</small>
+                                    </div>
+                                    <div class="col-4 text-center">
+                                        <div class="fw-bold text-warning">${patterns.quick_responses_count}</div>
+                                        <small class="text-muted">🏃 Quick</small>
+                                    </div>
+                                    <div class="col-4 text-center">
+                                        <div class="fw-bold text-info">${patterns.slow_responses_count}</div>
+                                        <small class="text-muted">🤔 Slow</small>
+                                    </div>
+                                </div>
+                                
+                                <!-- Additional Stats -->
+                                <hr class="my-3">
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <small class="text-muted">Started Conversations</small>
+                                        <div class="fw-bold">${patterns.conversations_started}</div>
+                                    </div>
+                                    <div class="col-6">
+                                        <small class="text-muted">Response Rate</small>
+                                        <div class="fw-bold">${patterns.response_rate_percentage}%</div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Activity Time Pattern -->
+                                ${patterns.night_owl_messages > 10 ? '<span class="badge bg-dark me-1">🌙 Night Owl</span>' : ''}
+                                ${patterns.early_bird_messages > 5 ? '<span class="badge bg-warning me-1">🌅 Early Bird</span>' : ''}
                             </div>
-                            <span class="badge bg-success">${count} times</span>
                         </div>
                     `;
                 });
-                document.getElementById('conversationStarterStats').innerHTML = starterHTML;
+                
+                document.getElementById('individualResponsePatterns').innerHTML = responseHTML;
             }
             
-            // Emoji Usage
-            if (data.emoji_usage) {
-                let emojiHTML = '';
-                for (const [user, emojis] of Object.entries(data.emoji_usage)) {
-                    if (Object.keys(emojis).length > 0) {
-                        emojiHTML += `<h6 class="mt-3 mb-2">${user}'s Top Emojis:</h6>`;
-                        const topEmojis = Object.entries(emojis).slice(0, 5);
-                        topEmojis.forEach(([emoji, count]) => {
-                            emojiHTML += `
-                                <span class="badge bg-light text-dark me-2 mb-1" style="font-size: 1em;">
-                                    ${emoji} <small>(${count})</small>
-                                </span>
-                            `;
-                        });
-                    }
+            // Communication Styles
+            if (data.communication_styles) {
+                let stylesHTML = '';
+                
+                for (const [user, style] of Object.entries(data.communication_styles)) {
+                    stylesHTML += `
+                        <div class="card border-start border-info border-4 mb-3">
+                            <div class="card-body">
+                                <h6 class="card-title text-info">
+                                    <i class="fas fa-user-circle me-2"></i>${user}'s Style
+                                </h6>
+                                
+                                <!-- Message Length Distribution -->
+                                <div class="mb-3">
+                                    <small class="text-muted">Message Length Preference</small>
+                                    <div class="progress mb-1" style="height: 20px;">
+                                        <div class="progress-bar bg-success" style="width: ${style.short_messages_percentage}%">
+                                            ${style.short_messages_percentage}% Short
+                                        </div>
+                                        <div class="progress-bar bg-warning" style="width: ${style.medium_messages_percentage}%">
+                                            ${style.medium_messages_percentage}% Medium
+                                        </div>
+                                        <div class="progress-bar bg-info" style="width: ${style.long_messages_percentage}%">
+                                            ${style.long_messages_percentage}% Long
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Communication Traits -->
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <small class="text-muted">Questions Asked</small>
+                                        <div class="fw-bold">${style.questions_asked} (${style.question_frequency}%)</div>
+                                    </div>
+                                    <div class="col-6">
+                                        <small class="text-muted">Exclamations</small>
+                                        <div class="fw-bold">${style.exclamations_used} (${style.exclamation_frequency}%)</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
                 }
-                document.getElementById('emojiUsageStats').innerHTML = emojiHTML || '<p class="text-muted">No emoji usage detected</p>';
+                
+                document.getElementById('communicationStyles').innerHTML = stylesHTML;
+            }
+            
+            // NEW: Relationship Metrics
+            if (data.relationship_metrics) {
+                let relationHTML = '';
+                
+                for (const [pair, metrics] of Object.entries(data.relationship_metrics)) {
+                    const balanceWidth = metrics.balance_score * 2; // Scale to 100%
+                    const balanceColor = balanceWidth > 80 ? 'success' : balanceWidth > 60 ? 'info' : 'warning';
+                    
+                    relationHTML += `
+                        <div class="card border-0 shadow-sm mb-3">
+                            <div class="card-body">
+                                <h5 class="card-title text-primary mb-3">
+                                    <i class="fas fa-users me-2"></i>${pair}
+                                </h5>
+                                
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-4 text-center">
+                                        <div class="bg-light p-3 rounded">
+                                            <div class="h4 mb-1">${metrics.connection_strength}</div>
+                                            <small class="text-muted">Connection Strength</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 text-center">
+                                        <div class="bg-light p-3 rounded">
+                                            <div class="h4 mb-1">${metrics.message_ratio}</div>
+                                            <small class="text-muted">Message Ratio</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 text-center">
+                                        <div class="bg-light p-3 rounded">
+                                            <div class="h4 mb-1">${metrics.mutual_responses}</div>
+                                            <small class="text-muted">Mutual Responses</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <small class="text-muted">Conversation Balance</small>
+                                        <small class="fw-bold">${metrics.balance_score}%</small>
+                                    </div>
+                                    <div class="progress" style="height: 20px;">
+                                        <div class="progress-bar bg-${balanceColor}" style="width: ${balanceWidth}%">
+                                            ${metrics.balance_score >= 40 ? 'Well Balanced' : 'Unbalanced'}
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <small class="text-muted">Response Rate</small>
+                                        <div class="fw-bold">${metrics.response_rate}%</div>
+                                    </div>
+                                    <div class="col-6">
+                                        <small class="text-muted">Total Interactions</small>
+                                        <div class="fw-bold">${metrics.mutual_responses}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                document.getElementById('relationshipMetrics').innerHTML = relationHTML || '<p class="text-muted">Not enough data for relationship analysis</p>';
+            }
+            
+            // NEW: Conversation Dynamics
+            if (data.conversation_dynamics) {
+                const dynamics = data.conversation_dynamics;
+                let dynamicsHTML = '';
+                
+                if (dynamics.longest_streak) {
+                    dynamicsHTML += `
+                        <div class="card border-start border-success border-4 mb-3">
+                            <div class="card-body">
+                                <h6 class="text-success"><i class="fas fa-fire me-2"></i>Longest Message Streak</h6>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div class="h3 mb-0">${dynamics.longest_streak.count} messages</div>
+                                        <small class="text-muted">by ${dynamics.longest_streak.user}</small>
+                                    </div>
+                                    <i class="fas fa-award fa-3x text-warning"></i>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                if (dynamics.avg_conversation_length) {
+                    dynamicsHTML += `
+                        <div class="card border-start border-info border-4 mb-3">
+                            <div class="card-body">
+                                <h6 class="text-info"><i class="fas fa-comments me-2"></i>Conversation Stats</h6>
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <small class="text-muted">Avg Length</small>
+                                        <div class="fw-bold">${dynamics.avg_conversation_length} messages</div>
+                                    </div>
+                                    <div class="col-6">
+                                        <small class="text-muted">Longest</small>
+                                        <div class="fw-bold">${dynamics.longest_conversation} messages</div>
+                                    </div>
+                                    <div class="col-6">
+                                        <small class="text-muted">Total Convos</small>
+                                        <div class="fw-bold">${dynamics.total_conversations}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                if (dynamics.peak_activity) {
+                    dynamicsHTML += `
+                        <div class="card border-start border-warning border-4 mb-3">
+                            <div class="card-body">
+                                <h6 class="text-warning"><i class="fas fa-chart-line me-2"></i>Activity Peaks</h6>
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <small class="text-muted">Peak Hour</small>
+                                        <div class="fw-bold">${dynamics.peak_activity.hour}:00 (${dynamics.peak_activity.messages} msgs)</div>
+                                    </div>
+                                    <div class="col-6">
+                                        <small class="text-muted">Quiet Hour</small>
+                                        <div class="fw-bold">${dynamics.peak_activity.quiet_hour}:00</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                document.getElementById('conversationDynamics').innerHTML = dynamicsHTML;
+            }
+            
+            // NEW: Temporal Patterns
+            if (data.temporal_patterns) {
+                const patterns = data.temporal_patterns;
+                let patternsHTML = '';
+                
+                if (patterns.weekend_vs_weekday) {
+                    const weekendData = patterns.weekend_vs_weekday;
+                    patternsHTML += `
+                        <div class="card border-start border-primary border-4 mb-3">
+                            <div class="card-body">
+                                <h6 class="text-primary"><i class="fas fa-calendar-week me-2"></i>Weekend vs Weekday</h6>
+                                <div class="mb-2">
+                                    <span class="badge bg-primary mb-2">${weekendData.preference}</span>
+                                </div>
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <small class="text-muted">Weekend</small>
+                                        <div class="fw-bold">${weekendData.weekend_messages} (${weekendData.weekend_percentage}%)</div>
+                                    </div>
+                                    <div class="col-6">
+                                        <small class="text-muted">Weekday</small>
+                                        <div class="fw-bold">${weekendData.weekday_messages}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                if (patterns.chat_trend) {
+                    const trend = patterns.chat_trend;
+                    patternsHTML += `
+                        <div class="card border-start border-success border-4 mb-3">
+                            <div class="card-body">
+                                <h6 class="text-success"><i class="fas fa-chart-area me-2"></i>Chat Trend</h6>
+                                <div class="mb-2">
+                                    <span class="badge bg-success">${trend.trend}</span>
+                                </div>
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <small class="text-muted">Peak Month</small>
+                                        <div class="fw-bold">${trend.most_active_month}</div>
+                                    </div>
+                                    <div class="col-6">
+                                        <small class="text-muted">Growth Rate</small>
+                                        <div class="fw-bold">${trend.growth_rate}%</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                if (patterns.seasonal_preference) {
+                    const season = patterns.seasonal_preference;
+                    patternsHTML += `
+                        <div class="card border-start border-info border-4 mb-3">
+                            <div class="card-body">
+                                <h6 class="text-info"><i class="fas fa-leaf me-2"></i>Seasonal Favorite</h6>
+                                <div class="h4 mb-0">${season.favorite_season}</div>
+                                <small class="text-muted">${season.messages} messages</small>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                document.getElementById('temporalPatterns').innerHTML = patternsHTML;
+            }
+            
+            // NEW: Engagement Metrics
+            if (data.engagement_metrics) {
+                let engagementHTML = '<div class="row">';
+                
+                // Sort by engagement score
+                const sortedEngagement = Object.entries(data.engagement_metrics)
+                    .sort(([,a], [,b]) => b.engagement_score - a.engagement_score);
+                
+                sortedEngagement.forEach(([user, metrics], index) => {
+                    const scoreColor = metrics.engagement_score >= 70 ? 'danger' : 
+                                      metrics.engagement_score >= 50 ? 'warning' : 
+                                      metrics.engagement_score >= 30 ? 'info' : 'secondary';
+                    const medal = index === 0 ? '🏆' : index === 1 ? '🥈' : index === 2 ? '🥉' : '⭐';
+                    
+                    engagementHTML += `
+                        <div class="col-lg-6 mb-3">
+                            <div class="card border-0 shadow-sm h-100">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <h6 class="mb-0">
+                                            ${medal} <i class="fas fa-user me-2"></i>${user}
+                                        </h6>
+                                        <span class="badge bg-${scoreColor}">${metrics.engagement_level}</span>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <small>Engagement Score</small>
+                                            <strong>${metrics.engagement_score}/100</strong>
+                                        </div>
+                                        <div class="progress" style="height: 12px;">
+                                            <div class="progress-bar bg-${scoreColor}" 
+                                                 style="width: ${metrics.engagement_score}%"></div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="row g-2 small">
+                                        <div class="col-4 text-center">
+                                            <div class="bg-light p-2 rounded">
+                                                <div class="fw-bold">${metrics.message_contribution}%</div>
+                                                <small class="text-muted">Messages</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-4 text-center">
+                                            <div class="bg-light p-2 rounded">
+                                                <div class="fw-bold">${metrics.media_activity}%</div>
+                                                <small class="text-muted">Media</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-4 text-center">
+                                            <div class="bg-light p-2 rounded">
+                                                <div class="fw-bold text-truncate">${metrics.interaction_quality}</div>
+                                                <small class="text-muted">Quality</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                engagementHTML += '</div>';
+                document.getElementById('engagementMetrics').innerHTML = engagementHTML;
             }
         }
         

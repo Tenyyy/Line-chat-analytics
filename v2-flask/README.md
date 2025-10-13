@@ -1,14 +1,42 @@
-# LINE Chat Analytics - Version 2 (Flask Web App)
+# LINE Chat Analytics - Version 2.1 (Flask Web App)
 
-This is the improved Flask-based web version of the LINE Chat Analytics application with enhanced features and better stability.
+This is the enhanced Flask-based web version of the LINE Chat Analytics application with advanced relationship analysis and comprehensive behavioral insights.
 
 ## ✨ Features
 
 ### 📊 Comprehensive Analytics
 - **Chat Overview**: Total messages, participants, date range, most active user
-- **Interactive Visualizations**: 7 different chart types with Plotly
-- **Message Patterns**: Hourly and daily activity analysis
+- **Interactive Visualizations**: 10+ different chart types with Plotly
+- **Cumulative View Toggle**: Switch between daily and cumulative message counts
+- **Message Patterns**: Hourly and daily activity analysis with heatmaps
 - **User Statistics**: Individual user metrics and comparisons
+
+### 🤝 Relationship Dynamics (NEW in v2.1)
+- **Balance Score (0-100)**: Measure conversation equilibrium between users
+- **Connection Strength**: Track relationship quality (Strong 💪, Good 👍, Moderate 🤝)
+- **Mutual Responsiveness**: See who responds to whom most
+- **Conversation Initiation**: Identify who starts conversations
+
+### 💬 Conversation Flow Analysis (NEW in v2.1)
+- **Message Streaks**: Track longest consecutive message sequences
+- **Conversation Length**: Average messages per conversation session
+- **Peak Activity Hours**: Identify busiest chat times
+- **Quiet Hours**: Detect low-activity periods
+
+### ⏰ Temporal Pattern Detection (NEW in v2.1)
+- **Weekend vs Weekday**: Analyze messaging preferences
+- **Monthly Trends**: Track growth/decline patterns (📈📉📊)
+- **Seasonal Analysis**: Discover seasonal chat preferences
+- **Activity Breakdown**: Complete temporal insights
+
+### 🏆 Engagement Scoring System (NEW in v2.1)
+- **0-100 Engagement Score**: Multi-factor participation analysis
+  - Message Frequency (30 points)
+  - Media Sharing (20 points)
+  - Message Diversity (20 points)
+  - Response Activity (30 points)
+- **Medal Rankings**: Top participants (🏆 🥈 🥉)
+- **Engagement Levels**: Super Engaged 🔥, Highly Engaged ⭐, Moderately Engaged 👌, Casual Chatter 💬
 
 ### 🌏 Multi-Language Support  
 - **Thai Language**: Full support for Thai text analysis with pythainlp
@@ -20,12 +48,15 @@ This is the improved Flask-based web version of the LINE Chat Analytics applicat
 - **Advanced Statistics**: Message length analysis, response patterns, conversation starters
 - **Emoji Analysis**: Track emoji usage by user
 - **Word Frequency**: Top words and user-specific vocabulary
+- **Personalized Fun Facts**: Unique insights for each participant
 
 ### 🎨 Modern UI
 - **Responsive Design**: Works on desktop and mobile
 - **LINE-Themed**: Authentic LINE app color scheme
 - **Interactive Charts**: Zoom, hover, and filter capabilities
 - **Drag & Drop Upload**: Easy file handling
+- **Progress Bars & Badges**: Visual metric displays
+- **Color-Coded Indicators**: Quick status identification
 
 ## 🚀 Quick Start
 

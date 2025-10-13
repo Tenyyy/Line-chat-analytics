@@ -22,10 +22,14 @@
 
 This project offers **two versions** to suit different needs:
 
-### 🆕 **Version 2 - Flask Web App** (Recommended)
+### 🆕 **Version 2.1 - Flask Web App** (Recommended)
 - ✨ **Modern responsive web interface**
 - 🌏 **Full Thai language support** 
-- 📊 **7+ interactive visualizations**
+- 📊 **10+ interactive visualizations** with cumulative toggle
+- 🤝 **Relationship dynamics analysis** with balance scoring
+- 💬 **Conversation flow tracking** with streak detection
+- ⏰ **Temporal pattern analysis** (weekend/weekday, trends, seasons)
+- 🏆 **Engagement scoring system** (0-100 with rankings)
 - 🎯 **Advanced analytics** (response patterns, emoji usage, text prediction)
 - 🚀 **Better stability** and performance
 - 📱 **Mobile-friendly design**
