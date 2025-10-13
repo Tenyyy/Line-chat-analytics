@@ -18,16 +18,24 @@ def check_python_version():
 
 def check_dependencies():
     """Check if required packages are installed"""
-    required_packages = ['flask', 'pandas', 'plotly', 'wordcloud', 'pythainlp', 'pillow']
+    # Map package names to their import names
+    required_packages = {
+        'flask': 'flask',
+        'pandas': 'pandas', 
+        'plotly': 'plotly',
+        'wordcloud': 'wordcloud',
+        'pythainlp': 'pythainlp',
+        'pillow': 'PIL'  # Pillow is imported as PIL
+    }
     missing_packages = []
     
-    for package in required_packages:
+    for package_name, import_name in required_packages.items():
         try:
-            __import__(package)
-            print(f"✅ {package}")
+            __import__(import_name)
+            print(f"✅ {package_name}")
         except ImportError:
-            missing_packages.append(package)
-            print(f"❌ {package} - not installed")
+            missing_packages.append(package_name)
+            print(f"❌ {package_name} - not installed")
     
     if missing_packages:
         print(f"\n📦 Missing packages: {', '.join(missing_packages)}")
