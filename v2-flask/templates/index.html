@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LINE Chat Analytics</title>
+    <title>Anypay Chat Analytics</title>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -185,23 +185,7 @@
             border-radius: 2px;
         }
         
-        .fun-facts {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 20px;
-            color: white;
-            padding: 2rem;
-            margin: 2rem 0;
-        }
-        
-        .fun-facts .metric-card {
-            background: rgba(255,255,255,0.1);
-            border-radius: 15px;
-            padding: 1.5rem;
-            margin: 1rem 0;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255,255,255,0.2);
-        }
-        
+
         .metric-value {
             font-size: 2rem;
             font-weight: 700;
@@ -279,29 +263,12 @@
             border-width: 4px !important;
         }
         
-        .fun-facts-card {
-            background: white !important;
-        }
-        
-        .fun-fact-item {
-            background-color: #f8f9fa !important;
-            color: #212529 !important;
-            border: 1px solid #e9ecef !important;
-            font-weight: 500;
-        }
-        
-        .fun-fact-item:hover {
-            background-color: #e9ecef !important;
-            transform: translateX(5px);
-            transition: all 0.2s ease;
-        }
     </style>
 </head>
 <body>
     <div class="main-header">
         <div class="container">
-            <h1><i class="fab fa-line"></i> LINE Chat Analytics</h1>
-            <p class="lead">Discover insights from your conversations with beautiful visualizations and comprehensive statistics</p>
+            <h1><i class="fab fa-line"></i> Anypay Chat Analytics</h1>
         </div>
     </div>
 
@@ -315,15 +282,15 @@
                         <i class="fas fa-cloud-upload-alt"></i>
                     </div>
                     <h3 class="mb-3">Drop your LINE chat file here</h3>
-                    <p class="mb-4 text-muted">Or click the button below to select a .txt file from your device</p>
-                    <input type="file" id="fileInput" accept=".txt" style="display: none;">
+                    <p class="mb-4 text-muted">Or click the button below to select a .csv file from your device</p>
+                    <input type="file" id="fileInput" accept=".csv" style="display: none;">
                     <button class="btn btn-primary btn-custom" id="chooseFileBtn">
                         <i class="fas fa-file-upload me-2"></i>Choose Chat File
                     </button>
                     <div class="mt-3">
                         <small class="text-muted">
                             <i class="fas fa-info-circle me-1"></i>
-                            Supported format: LINE chat export (.txt files)
+                            Supported format: LINE chat export (.csv files)
                         </small>
                     </div>
                 </div>
@@ -436,17 +403,6 @@
             </div>
         </div>
         
-        <!-- Fun Facts Section -->
-        <div id="funFactsSection" style="display: none;" class="fade-in">
-            <div class="section-header">
-                <h2><i class="fas fa-star me-3"></i>Fun Facts</h2>
-            </div>
-            <div class="fun-facts">
-                <div class="row" id="funFactsContent">
-                    <!-- Fun facts will be populated here -->
-                </div>
-            </div>
-        </div>
 
         <!-- Visualizations Section -->
         <div id="visualizationsSection" style="display: none;" class="fade-in">
@@ -507,49 +463,6 @@
                     <div class="chart-container">
                         <h4 class="mb-3"><i class="fas fa-fire me-2 text-danger"></i>Activity Heatmap</h4>
                         <div id="activityHeatmapChart"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Word Prediction Section -->
-        <div id="predictionSection" style="display: none;" class="fade-in">
-            <div class="section-header">
-                <h2><i class="fas fa-brain me-3"></i>Who Wrote This?</h2>
-            </div>
-            
-            <div class="row">
-                <div class="col-lg-8 mx-auto">
-                    <div class="chart-container">
-                        <h4 class="mb-3"><i class="fas fa-robot me-2 text-primary"></i>Text Author Prediction</h4>
-                        <p class="text-muted mb-4">Enter some text and see who is most likely to have written it based on chat patterns</p>
-                        
-                        <div class="mb-4">
-                            <div class="input-group input-group-lg">
-                                <textarea 
-                                    class="form-control" 
-                                    id="predictionInput" 
-                                    placeholder="Type a message here to predict who would write it..."
-                                    rows="3"
-                                    style="resize: none; border-radius: 15px 0 0 15px;"
-                                ></textarea>
-                                <button 
-                                    class="btn btn-primary btn-custom" 
-                                    type="button" 
-                                    id="predictBtn"
-                                    style="border-radius: 0 15px 15px 0;"
-                                >
-                                    <i class="fas fa-magic me-2"></i>Predict
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <div id="predictionResult" style="display: none;">
-                            <div class="alert alert-info alert-custom">
-                                <h5 class="mb-3"><i class="fas fa-chart-pie me-2"></i>Prediction Results</h5>
-                                <div id="predictionContent"></div>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -735,8 +648,8 @@
             isProcessing = true;
             console.log('Handling file:', file.name, file.size);
             
-            if (!file.name.endsWith('.txt')) {
-                showStatus('error', 'Please select a .txt file');
+            if (!file.name.endsWith('.csv')) {
+                showStatus('error', 'Please select a .csv file');
                 isProcessing = false;
                 return;
             }
@@ -814,8 +727,7 @@
                 const advancedStatsResponse = await fetch('/advanced_stats');
                 const advancedStatsData = await advancedStatsResponse.json();
                 
-                // Display stats with advanced data for fun facts
-                displayStats(stats, advancedStatsData);
+            
 
                 // Load visualizations
                 const vizResponse = await fetch('/visualizations');
@@ -879,8 +791,6 @@
             }
             userStatsDiv.innerHTML = userStatsHTML;
 
-            // Display fun facts with advanced stats for personalization
-            displayFunFacts(stats, advancedStats);
 
             // Show stats sections with animation
             setTimeout(() => {
@@ -890,74 +800,6 @@
             }, 300);
         }
         
-        function displayFunFacts(stats, advancedStats = null) {
-            const funFactsDiv = document.getElementById('funFactsContent');
-            let funFactsHTML = '';
-            
-            // Check if we have personalized fun facts from advanced stats
-            if (advancedStats && advancedStats.personalized_fun_facts) {
-                funFactsHTML += '<div class="col-12 mb-4"><h4 class="text-center text-primary"><i class="fas fa-sparkles me-2"></i>Personal Fun Facts</h4></div>';
-                
-                for (const [user, facts] of Object.entries(advancedStats.personalized_fun_facts)) {
-                    funFactsHTML += `
-                        <div class="col-lg-6 mb-4">
-                            <div class="card border-0 shadow-sm h-100 fun-facts-card">
-                                <div class="card-header bg-gradient-primary text-white">
-                                    <h5 class="mb-0"><i class="fas fa-user-star me-2"></i>${user}'s Profile</h5>
-                                </div>
-                                <div class="card-body bg-white">
-                                    <div class="d-flex flex-column gap-2">
-                    `;
-                    
-                    facts.forEach(fact => {
-                        funFactsHTML += `
-                            <div class="fun-fact-item d-flex align-items-center p-3 rounded">
-                                <span style="font-size: 0.95em; line-height: 1.4;">${fact}</span>
-                            </div>
-                        `;
-                    });
-                    
-                    funFactsHTML += `
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                }
-            } else {
-                // Fallback to general fun facts if personalized ones aren't available
-                if (stats.chat_type_counts) {
-                    const facts = [
-                        { icon: 'fas fa-images', label: 'Photos Shared', value: formatNumber(stats.chat_type_counts['[Photo]'] || 0), color: 'warning' },
-                        { icon: 'fas fa-laugh', label: 'Stickers Sent', value: formatNumber(stats.chat_type_counts['[Sticker]'] || 0), color: 'info' },
-                        { icon: 'fas fa-video', label: 'Videos Shared', value: formatNumber(stats.chat_type_counts['[Video]'] || 0), color: 'danger' },
-                        { icon: 'fas fa-phone-slash', label: 'Missed Calls', value: formatNumber(stats.chat_type_counts['☎ Missed call'] || 0), color: 'secondary' },
-                        { icon: 'fas fa-file', label: 'Files Shared', value: formatNumber(stats.chat_type_counts['[File]'] || 0), color: 'success' },
-                        { icon: 'fas fa-microphone', label: 'Voice Messages', value: formatNumber(stats.chat_type_counts['[Voice message]'] || 0), color: 'primary' }
-                    ];
-                    
-                    facts.forEach(fact => {
-                        if (parseInt(fact.value) > 0) {
-                            funFactsHTML += `
-                                <div class="col-md-4 col-sm-6">
-                                    <div class="metric-card">
-                                        <div class="d-flex align-items-center">
-                                            <i class="${fact.icon} fa-2x me-3"></i>
-                                            <div>
-                                                <div class="metric-value">${fact.value}</div>
-                                                <div class="metric-label">${fact.label}</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            `;
-                        }
-                    });
-                }
-            }
-            
-            funFactsDiv.innerHTML = funFactsHTML;
-        }
         
         function formatNumber(num) {
             if (num >= 1000000) {
@@ -1066,7 +908,7 @@
                 const container = document.getElementById('topWordsContainer');
                 let html = '';
                 
-                const words = Object.entries(data.word_frequencies).slice(0, 15);
+                const words = Object.entries(data.word_frequencies).sort((a, b) => b[1] - a[1]).slice(0, 15);
                 words.forEach(([word, count], index) => {
                     const percentage = ((count / words[0][1]) * 100).toFixed(0);
                     html += `

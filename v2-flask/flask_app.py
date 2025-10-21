@@ -179,7 +179,7 @@ class LineAnalyzer:
         try:
             # Clean emoji and read as CSV
             text = StringIO(self.deEmojify(file_content))
-            df = pd.read_csv(text, sep="\t", header=None, names=["time", "name", "chat"])
+            df = pd.read_csv(text, sep="$", header=None, names=["time", "name", "chat"])
             
             if len(df) < 3:
                 raise ValueError("File too short or invalid format")
@@ -295,6 +295,7 @@ class LineAnalyzer:
                 xaxis_title='Count', 
                 yaxis_title='Message',
                 height=500,
+                width=800,
                 showlegend=False,
                 title_font_size=16
             )
@@ -312,7 +313,8 @@ class LineAnalyzer:
             )
             fig2.update_layout(
                 template='plotly_white',
-                height=400
+                height=400,
+                width=800
             )
             fig2.update_traces(textposition='inside', textinfo='percent+label')
             plots['messages_per_user'] = fig2.to_json()
@@ -334,6 +336,7 @@ class LineAnalyzer:
                     xaxis_title='Hour of Day', 
                     yaxis_title='Number of Messages',
                     height=400,
+                    width=800,
                     xaxis=dict(tickmode='linear', tick0=0, dtick=2)
                 )
                 plots['messages_by_hour'] = fig3.to_json()
@@ -358,6 +361,7 @@ class LineAnalyzer:
                     xaxis_title='Day of Week', 
                     yaxis_title='Number of Messages',
                     height=400,
+                    width=800,
                     showlegend=False
                 )
                 plots['messages_by_dow'] = fig4.to_json()
@@ -385,6 +389,7 @@ class LineAnalyzer:
                     xaxis_title='Content Type', 
                     yaxis_title='Count',
                     height=400,
+                    width=800,
                     showlegend=False
                 )
                 plots['chat_types'] = fig5.to_json()
@@ -407,6 +412,7 @@ class LineAnalyzer:
                     xaxis_title='Date', 
                     yaxis_title='Messages per Day',
                     height=400,
+                    width=800,
                     updatemenus=[
                         dict(
                             type="buttons",

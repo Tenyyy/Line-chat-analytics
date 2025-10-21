@@ -11,6 +11,8 @@ import json
 import base64
 from collections import Counter
 import os
+from datetime import datetime
+import pythainlp
 
 # Thai text processing
 try:
@@ -90,23 +92,30 @@ class LineAnalyzer:
         if len(df_filtered) == 0:
             return df
             
-        date_list = df_filtered['date'].str.split('/', n=2, expand=True)
-        if len(date_list.columns) < 3:
-            return df_filtered
+        date_pattern = r'(\d{2})/(\d{2})/(\d{4})'
+        date_parts = df_filtered['date'].str.extract(date_pattern)
+        if date_parts.empty or date_parts.shape[1] < 3:
+        # If extraction failed for all filtered rows, return the original df
+            return df
             
-        df_filtered['day'] = date_list[0]
-        df_filtered['month'] = date_list[1]
-        df_filtered['year'] = pd.to_numeric(date_list[2], errors='coerce')
+        df_filtered['day'] = date_parts[0]
+        df_filtered['month'] = date_parts[1]
+        # Use errors='coerce' to turn non-numeric years (where regex failed) into NaN
+        df_filtered['year'] = pd.to_numeric(date_parts[2], errors='coerce')
+        df_filtered.dropna(subset=['year'], inplace=True)
+        if df_filtered.empty:
+            return df
         
         # Convert Buddhist year to Christian year
         mask = df_filtered['year'] > 2500
         df_filtered.loc[mask, 'year'] = df_filtered.loc[mask, 'year'] - 543
-        
-        df_filtered['year'] = df_filtered['year'].astype('str')
+        df_filtered['year'] = df_filtered['year'].astype('int').astype('str')
         df_filtered['datetime'] = pd.to_datetime(
-            df_filtered['day'] + '/' + df_filtered['month'] + '/' + df_filtered['year'] + ' ' + df_filtered['time'], 
-            errors='coerce'
-        )
+        df_filtered['day'] + '/' + df_filtered['month'] + '/' + df_filtered['year'] + ' ' + df_filtered['time'],
+        format="%d/%m/%Y %H:%M",
+        errors='coerce'
+    )
+
         df_filtered['hour'] = df_filtered['datetime'].dt.hour
         
         return df_filtered
@@ -179,7 +188,7 @@ class LineAnalyzer:
         try:
             # Clean emoji and read as CSV
             text = StringIO(self.deEmojify(file_content))
-            df = pd.read_csv(text, sep="\t", header=None, names=["time", "name", "chat"])
+            df = pd.read_csv(text, sep="$", header=None, names=["time", "name", "chat"])
             
             if len(df) < 3:
                 raise ValueError("File too short or invalid format")
@@ -252,7 +261,7 @@ class LineAnalyzer:
         if 'datetime' in df_clean.columns and not df_clean['datetime'].isna().all():
             min_date = df_clean['datetime'].min()
             max_date = df_clean['datetime'].max()
-            stats['date_range'] = f"{min_date.strftime('%Y-%m-%d')} to {max_date.strftime('%Y-%m-%d')}"
+            stats['date_range'] = f"{min_date.strftime('%d/%m/%Y')} to {max_date.strftime('%d/%m/%Y')}"
         else:
             stats['date_range'] = "Date information unavailable"
         
@@ -305,14 +314,20 @@ class LineAnalyzer:
         try:
             # 2. Messages per user - enhanced with colors
             user_counts = df_clean['name'].value_counts()
+            custom_labels = (
+                user_counts.index + 
+                ' (' + 
+                user_counts.values.astype(str) + 
+                ')'
+            )
             fig2 = px.pie(
                 values=user_counts.values, 
-                names=user_counts.index,
+                names=custom_labels,
                 color_discrete_sequence=colors
             )
             fig2.update_layout(
                 template='plotly_white',
-                height=400
+                height=400  
             )
             fig2.update_traces(textposition='inside', textinfo='percent+label')
             plots['messages_per_user'] = fig2.to_json()
@@ -351,7 +366,8 @@ class LineAnalyzer:
                     x=dow_counts.index, 
                     y=dow_counts.values,
                     color=dow_counts.values,
-                    color_continuous_scale='Blues'
+                    color_continuous_scale='Sunsetdark',
+                    text_auto=True
                 )
                 fig4.update_layout(
                     template='plotly_white',
@@ -378,7 +394,8 @@ class LineAnalyzer:
                     x=list(types), 
                     y=list(counts),
                     color=list(counts),
-                    color_continuous_scale='Plasma'
+                    color_continuous_scale='Sunsetdark',
+                    text_auto=True
                 )
                 fig5.update_layout(
                     template='plotly_white', 
@@ -414,10 +431,10 @@ class LineAnalyzer:
             # 7. Activity heatmap (hour vs day of week)
             if 'hour' in df_clean.columns and 'dow' in df_clean.columns:
                 # Create heatmap data
+                
                 heatmap_data = df_clean.groupby(['dow', 'hour']).size().unstack(fill_value=0)
                 day_order = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
                 heatmap_data = heatmap_data.reindex(day_order, fill_value=0)
-                
                 fig7 = px.imshow(
                     heatmap_data.values,
                     labels=dict(x="Hour of Day", y="Day of Week", color="Messages"),
@@ -494,7 +511,7 @@ class LineAnalyzer:
             font_path = None
             if THAI_SUPPORT:
                 # Try to find Thai font in the assets folder
-                thai_font_path = 'assets/THSarabunNew.ttf'
+                thai_font_path = r'C:\Users\EkpitiKawtummachai\OneDrive - Anypay Company Limited\Desktop\chatana\Line-chat-analytics\assets\THSarabunNew.ttf'
                 if os.path.exists(thai_font_path):
                     font_path = thai_font_path
                     print("Using Thai font for wordcloud")
@@ -566,62 +583,6 @@ class LineAnalyzer:
         except Exception as e:
             print(f"Error building user patterns: {e}")
     
-    def predict_user_from_text(self, input_text):
-        """Predict which user is most likely to write the given text"""
-        if not self.user_word_patterns or not input_text:
-            return {"prediction": "Unknown", "confidence": 0, "scores": {}}
-        
-        try:
-            # Tokenize input text
-            input_words = self.tokenize_text(input_text)
-            if not input_words:
-                return {"prediction": "Unknown", "confidence": 0, "scores": {}}
-            
-            user_scores = {}
-            
-            for user, word_freq in self.user_word_patterns.items():
-                score = 0
-                total_user_words = sum(word_freq.values())
-                
-                if total_user_words == 0:
-                    continue
-                
-                # Calculate score based on word frequency
-                for word in input_words:
-                    word_count = word_freq.get(word, 0)
-                    # Use frequency ratio as probability
-                    word_probability = word_count / total_user_words
-                    score += word_probability
-                
-                # Normalize by input length
-                user_scores[user] = score / len(input_words) if input_words else 0
-            
-            if not user_scores:
-                return {"prediction": "Unknown", "confidence": 0, "scores": {}}
-            
-            # Find best prediction
-            best_user = max(user_scores, key=user_scores.get)
-            max_score = user_scores[best_user]
-            total_score = sum(user_scores.values())
-            
-            # Calculate confidence as percentage
-            confidence = (max_score / total_score * 100) if total_score > 0 else 0
-            
-            # Convert scores to percentages for display
-            display_scores = {}
-            if total_score > 0:
-                for user, score in user_scores.items():
-                    display_scores[user] = round((score / total_score * 100), 1)
-            
-            return {
-                "prediction": best_user,
-                "confidence": round(confidence, 1),
-                "scores": display_scores
-            }
-            
-        except Exception as e:
-            print(f"Prediction error: {e}")
-            return {"prediction": "Unknown", "confidence": 0, "scores": {}}
     
     def get_advanced_stats(self):
         """Get advanced statistics and insights"""
@@ -821,30 +782,16 @@ def get_word_frequency():
             all_words.extend(words)
         
         word_freq = Counter(all_words)
-        top_30_words = dict(word_freq.most_common(30))
+        top_15_words = dict(word_freq.most_common(15))
         
         return jsonify({
-            'word_frequencies': top_30_words,
+            'word_frequencies': top_15_words,
             'total_unique_words': len(word_freq),
             'total_words': sum(word_freq.values())
         })
     except Exception as e:
         return jsonify({'error': str(e)})
 
-@app.route('/predict_user', methods=['POST'])
-def predict_user():
-    try:
-        data = request.get_json()
-        input_text = data.get('text', '').strip()
-        
-        if not input_text:
-            return jsonify({'error': 'No text provided'})
-        
-        prediction = analyzer.predict_user_from_text(input_text)
-        return jsonify(prediction)
-    
-    except Exception as e:
-        return jsonify({'error': str(e)})
 
 @app.route('/advanced_stats')
 def get_advanced_stats():

@@ -226,7 +226,7 @@ if uploaded_file is not None:
 
 # personal chat only
 text = StringIO(deEmojify(string_data))
-df = pd.read_csv(text, sep="\t", header=None, names=["time", "name", "chat"])
+df = pd.read_csv(text, sep=",/,!", header=None, names=["time", "name", "chat"])
 df = df.iloc[2:] # the first 2 rows of data is unusable
 df.reset_index(inplace=True)
 df['date'] = create_date(df['time'].values)

@@ -91,7 +91,7 @@ class LineAnalyzer:
         try:
             # Clean emoji and read as CSV
             text = StringIO(self.deEmojify(file_content))
-            df = pd.read_csv(text, sep="\t", header=None, names=["time", "name", "chat"])
+            df = pd.read_csv(text, sep="$", header=None, names=["time", "name", "chat"])
             
             if len(df) < 3:
                 raise ValueError("File too short or invalid format")
