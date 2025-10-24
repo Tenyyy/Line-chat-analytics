@@ -84,41 +84,55 @@ class LineAnalyzer:
         return df_
     
     def create_datetime(self, df):
-        """change Buddhist year to Christian year and change the column type to be pd.datetime"""
-        if 'time' not in df.columns:
+        """Convert Buddhist year to Christian year and create datetime + hour columns."""
+        if 'time' not in df.columns or 'date' not in df.columns:
             return df
-            
-        df_filtered = df[df.time.str.len() < 10].copy()
+
+        df = df.copy()
+        df_filtered = df[df['time'].str.len() < 10].copy()
+
         if len(df_filtered) == 0:
             return df
-            
+
+    # Extract day/month/year
         date_pattern = r'(\d{2})/(\d{2})/(\d{4})'
         date_parts = df_filtered['date'].str.extract(date_pattern)
+
         if date_parts.empty or date_parts.shape[1] < 3:
-        # If extraction failed for all filtered rows, return the original df
             return df
-            
+
         df_filtered['day'] = date_parts[0]
         df_filtered['month'] = date_parts[1]
-        # Use errors='coerce' to turn non-numeric years (where regex failed) into NaN
         df_filtered['year'] = pd.to_numeric(date_parts[2], errors='coerce')
         df_filtered.dropna(subset=['year'], inplace=True)
+
         if df_filtered.empty:
             return df
-        
-        # Convert Buddhist year to Christian year
+
+    # Convert Buddhist to Gregorian
         mask = df_filtered['year'] > 2500
         df_filtered.loc[mask, 'year'] = df_filtered.loc[mask, 'year'] - 543
-        df_filtered['year'] = df_filtered['year'].astype('int').astype('str')
-        df_filtered['datetime'] = pd.to_datetime(
-        df_filtered['day'] + '/' + df_filtered['month'] + '/' + df_filtered['year'] + ' ' + df_filtered['time'],
-        format="%d/%m/%Y %H:%M",
-        errors='coerce'
-    )
+        df_filtered['year'] = df_filtered['year'].astype(int).astype(str)
 
+    # Build datetime
+        df_filtered['datetime'] = pd.to_datetime(
+            df_filtered['day'] + '/' + df_filtered['month'] + '/' + df_filtered['year'] + ' ' + df_filtered['time'],
+            format="%d/%m/%Y %H:%M",
+            errors='coerce'
+        )
+
+    # Extract hour
         df_filtered['hour'] = df_filtered['datetime'].dt.hour
-        
-        return df_filtered
+
+    # ✅ Merge back to main dataframe safely
+        df = df.merge(
+            df_filtered[['time', 'datetime', 'hour']],
+            on='time',
+            how='left'
+        )
+
+        return df
+
     
     def tokenize_text(self, text):
         """Enhanced tokenization for wordcloud supporting Thai and English"""
@@ -243,7 +257,7 @@ class LineAnalyzer:
         
         except Exception as e:
             return {'success': False, 'message': f'Error processing file: {str(e)}'}
-    
+   
     def get_message_stats(self):
         """Get basic message statistics"""
         if self.df is None:
@@ -310,7 +324,8 @@ class LineAnalyzer:
             plots['top_messages'] = fig1.to_json()
         except Exception as e:
             print(f"Top messages chart error: {e}")
-        
+
+       
         try:
             # 2. Messages per user - enhanced with colors
             user_counts = df_clean['name'].value_counts()
@@ -335,25 +350,45 @@ class LineAnalyzer:
             print(f"Messages per user chart error: {e}")
         
         try:
-            # 3. Messages by hour (if datetime available)
+    # Ensure hour column exists and is numeric
+            if 'datetime' in df_clean.columns and not df_clean['datetime'].isna().all():
+                df_clean['hour'] = df_clean['datetime'].dt.hour
+
             if 'hour' in df_clean.columns and not df_clean['hour'].isna().all():
-                hourly_counts = df_clean.groupby('hour').size().reindex(range(24), fill_value=0)
+                df_clean['hour'] = pd.to_numeric(df_clean['hour'], errors='coerce')
+                df_clean = df_clean[(df_clean['hour'] >= 0) & (df_clean['hour'] < 24)]
+                df_clean['hour'] = df_clean['hour'].astype(int)
+
+                hourly_counts = (
+                    df_clean.groupby('hour')
+                    .size()
+                    .reindex(range(24), fill_value=0)
+                )
+
+                print("Hourly counts:\n", hourly_counts)
+
                 fig3 = px.line(
-                    x=hourly_counts.index, 
+                    x=hourly_counts.index,
                     y=hourly_counts.values,
                     markers=True
                 )
                 fig3.update_traces(line_color='#00d084', line_width=3, marker_size=8)
                 fig3.update_layout(
-                    template='plotly_white', 
-                    xaxis_title='Hour of Day', 
+                    template='plotly_white',
+                    xaxis_title='Hour of Day',
                     yaxis_title='Number of Messages',
                     height=400,
-                    xaxis=dict(tickmode='linear', tick0=0, dtick=2)
+                    xaxis=dict(tickmode='linear', tick0=0, dtick=2, range=[0, 23])
                 )
+
                 plots['messages_by_hour'] = fig3.to_json()
+            else:
+                print("⚠️ No 'hour' column found or all NaN — skipping plot.")
+
         except Exception as e:
             print(f"Messages by hour chart error: {e}")
+
+
         
         try:
             # 4. Messages by day of week
